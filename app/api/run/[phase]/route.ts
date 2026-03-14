@@ -1,3 +1,5 @@
+export const maxDuration = 300
+
 import { NextRequest } from 'next/server'
 import { runResearch } from '@/lib/tools/research'
 import { generateDraft } from '@/lib/tools/generate-draft'
