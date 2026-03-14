@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Dashboard — West Michigan Real Estate</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f0f2f5; color: #1a2e44; min-height: 100vh; }
+
+    /* Header */
+    .header { background: #1a2e44; color: #fff; padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .header h1 { font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
+    .header p  { font-size: 11px; color: #c8a96e; margin-top: 2px; }
+
+    /* Status bar */
+    .status-bar { background: #fff; border-bottom: 1px solid #dde1e7; padding: 9px 28px; display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+    .status-label { font-size: 11px; font-weight: 600; color: #8492a6; text-transform: uppercase; letter-spacing: 0.05em; }
+    .pill { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; background: #f0f2f5; color: #8492a6; }
+    .pill.ok      { background: #e6f7ee; color: #1d8348; }
+    .pill.missing { background: #fdecea; color: #c0392b; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+
+    /* Main layout */
+    .main { max-width: 1340px; margin: 0 auto; padding: 22px 20px 48px; }
+
+    /* Topic Ideas section */
+    .topics-section { background: #fff; border: 1px solid #dde1e7; border-radius: 10px; margin-bottom: 18px; overflow: hidden; }
+    .topics-header { background: #1a2e44; color: #fff; padding: 13px 18px; display: flex; align-items: center; gap: 12px; }
+    .topics-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
+    .topics-header p  { font-size: 11px; color: #c8a96e; }
+    .topics-body { padding: 18px; }
+    .topics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+    @media (max-width: 900px) { .topics-grid { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 600px) { .topics-grid { grid-template-columns: 1fr; } }
+
+    .topic-card {
+      border: 1.5px solid #dde1e7; border-radius: 8px; padding: 14px 16px;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s;
+      background: #fafbfc;
+    }
+    .topic-card:hover { border-color: #c8a96e; background: #fef9f0; }
+    .topic-card.selected { border-color: #c8a96e; background: #fef9f0; box-shadow: 0 0 0 2px #c8a96e33; }
+    .topic-card-title { font-size: 13px; font-weight: 600; color: #1a2e44; margin-bottom: 5px; line-height: 1.35; }
+    .topic-card-keyword { font-size: 11px; color: #1a6b9e; font-family: monospace; margin-bottom: 6px; }
+    .topic-card-meta { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+    .topic-tag { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .tag-community  { background: #e8f5e9; color: #2e7d32; }
+    .tag-market     { background: #e3f2fd; color: #1565c0; }
+    .tag-buyer      { background: #f3e5f5; color: #6a1b9a; }
+    .tag-heroes     { background: #fff8e1; color: #e65100; }
+    .tag-tier1 { background: #fdecea; color: #c0392b; }
+    .tag-tier2 { background: #fff3e0; color: #e65100; }
+    .tag-tier3 { background: #f3e5f5; color: #6a1b9a; }
+    .topic-card-rationale { font-size: 11px; color: #6a7a8a; line-height: 1.45; }
+    .topic-card-length { font-size: 10px; color: #8492a6; margin-top: 5px; }
+
+    .topics-placeholder { text-align: center; padding: 32px 20px; color: #8492a6; font-size: 13px; }
+    .topics-placeholder span { font-size: 32px; display: block; margin-bottom: 8px; }
+
+    /* Topic bar */
+    .topic-bar { background: #fff; border: 1px solid #dde1e7; border-radius: 10px; padding: 16px 20px; margin-bottom: 18px; }
+    .topic-bar-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .topic-bar label { font-size: 13px; font-weight: 600; color: #1a2e44; white-space: nowrap; }
+    .topic-input-wrap { flex: 1; min-width: 240px; }
+    .topic-input-wrap input {
+      width: 100%; font-size: 14px; padding: 8px 12px;
+      border: 1.5px solid #dde1e7; border-radius: 7px;
+      color: #1a2e44; background: #fafbfc;
+    }
+    .topic-input-wrap input:focus { outline: none; border-color: #c8a96e; background: #fff; }
+    .keyword-input-wrap { flex: 0 0 260px; }
+    .keyword-input-wrap input {
+      width: 100%; font-size: 13px; padding: 8px 12px;
+      border: 1.5px solid #dde1e7; border-radius: 7px;
+      color: #1a2e44; background: #fafbfc; font-family: monospace;
+    }
+    .keyword-input-wrap input:focus { outline: none; border-color: #c8a96e; background: #fff; }
+    .save-flash { font-size: 12px; color: #1d8348; font-weight: 500; opacity: 0; transition: opacity 0.3s; }
+    .save-flash.show { opacity: 1; }
+
+    /* Steps */
+    .steps { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 18px; margin-bottom: 18px; }
+    @media (max-width: 960px) { .steps { grid-template-columns: 1fr; } }
+
+    .card { background: #fff; border-radius: 10px; border: 1px solid #dde1e7; overflow: hidden; display: flex; flex-direction: column; }
+    .card-header { background: #1a2e44; color: #fff; padding: 13px 18px; display: flex; align-items: center; gap: 10px; }
+    .step-num { width: 26px; height: 26px; background: #c8a96e; color: #1a2e44; border-radius: 50%; font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .card-header h2 { font-size: 14px; font-weight: 600; }
+    .card-header p  { font-size: 11px; color: #c8a96e; margin-top: 1px; }
+    .card-body { padding: 18px; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    .card-desc { font-size: 13px; color: #5a6a7a; line-height: 1.5; }
+
+    /* Buttons */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 11px 18px; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; text-decoration: none; line-height: 1; }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: #1a2e44; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #243d5c; }
+    .btn-gold    { background: #c8a96e; color: #1a2e44; }
+    .btn-gold:hover:not(:disabled) { background: #b89558; }
+    .btn-outline { background: transparent; color: #1a2e44; border: 1.5px solid #c0c8d4; }
+    .btn-outline:hover:not(:disabled) { background: #f0f2f5; }
+    .btn-success { background: #1d8348; color: #fff; }
+    .btn-success:hover:not(:disabled) { background: #196a3c; }
+    .btn-warn    { background: #f59e0b; color: #fff; }
+    .btn-warn:hover:not(:disabled) { background: #d97706; }
+    .btn-sm   { padding: 7px 13px; font-size: 12px; }
+    .btn-full { width: 100%; }
+
+    /* Draft textarea */
+    .draft-area { width: 100%; min-height: 340px; font-family: "SF Mono","Menlo",monospace; font-size: 12px; line-height: 1.6; padding: 12px; border: 1.5px solid #dde1e7; border-radius: 7px; resize: vertical; color: #1a2e44; background: #fafbfc; flex: 1; }
+    .draft-area:focus { outline: none; border-color: #c8a96e; background: #fff; }
+    .draft-toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .draft-hint { font-size: 11px; color: #8492a6; margin-left: auto; }
+
+    /* Sources panel */
+    .sources-panel { border: 1.5px solid #dde1e7; border-radius: 7px; background: #fafbfc; font-size: 11.5px; line-height: 1.55; color: #3a4a5a; padding: 12px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; flex: 1; }
+
+    /* Image panel */
+    .image-panel { border: 1.5px solid #dde1e7; border-radius: 7px; background: #f5f6f8; overflow: hidden; min-height: 130px; display: flex; align-items: center; justify-content: center; }
+    .image-panel img { width: 100%; height: auto; display: block; }
+    .image-placeholder { font-size: 12px; color: #aab0bc; text-align: center; padding: 24px 16px; line-height: 1.5; }
+    .image-placeholder span { font-size: 28px; display: block; margin-bottom: 6px; }
+
+    /* SEO check results */
+    .seo-results { border: 1.5px solid #dde1e7; border-radius: 7px; background: #fafbfc; padding: 12px; max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+    .seo-check-item { display: flex; align-items: flex-start; gap: 7px; font-size: 12px; line-height: 1.4; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+    .seo-check-item:last-child { border-bottom: none; }
+    .seo-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+    .seo-check-name { font-weight: 600; color: #1a2e44; min-width: 160px; }
+    .seo-check-detail { color: #5a6a7a; flex: 1; }
+    .seo-score-bar { background: #e6f7ee; border-radius: 6px; padding: 8px 12px; font-size: 13px; font-weight: 600; color: #1d8348; text-align: center; }
+    .seo-score-bar.fail { background: #fdecea; color: #c0392b; }
+
+    /* SEO fields */
+    .seo-fields { background: #fff; border-radius: 10px; border: 1px solid #dde1e7; margin-bottom: 18px; overflow: hidden; }
+    .seo-fields-header { background: #1a2e44; color: #fff; padding: 13px 18px; display: flex; align-items: center; gap: 10px; }
+    .seo-fields-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; border-top: 1px solid #dde1e7; }
+    @media (max-width: 800px) { .seo-fields-grid { grid-template-columns: 1fr; } }
+    .seo-field-cell { padding: 14px 18px; border-right: 1px solid #dde1e7; }
+    .seo-field-cell:last-child { border-right: none; }
+    .seo-field-cell2 { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #dde1e7; }
+    .seo-field-cell2 > div { padding: 14px 18px; border-right: 1px solid #dde1e7; }
+    .seo-field-cell2 > div:last-child { border-right: none; }
+    .section-label { font-size: 11px; font-weight: 600; color: #8492a6; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Console */
+    .console-card { background: #fff; border-radius: 10px; border: 1px solid #dde1e7; overflow: hidden; }
+    .console-header { background: #1a2e44; color: #c8a96e; padding: 9px 18px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+    #console-status { font-size: 11px; color: #aaa; margin-left: auto; }
+    #console { background: #111827; color: #d1fae5; font-family: "SF Mono","Menlo","Consolas",monospace; font-size: 12px; line-height: 1.55; padding: 14px 18px; min-height: 160px; max-height: 320px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+    #console .line-err  { color: #fca5a5; }
+    #console .line-warn { color: #fde68a; }
+    #console .line-ok   { color: #6ee7b7; }
+    #console .line-info { color: #d1fae5; }
+
+    /* Misc */
+    .row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .divider { border: none; border-top: 1px solid #eee; }
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .badge-running { background: #fde68a; color: #92400e; }
+    .badge-done    { background: #d1fae5; color: #065f46; }
+    .badge-error   { background: #fde8e8; color: #991b1b; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>West Michigan Blog Dashboard</h1>
+    <p>Jason O'Brien — SEO Blog Post Generator · jobrienhomes.com</p>
+  </div>
+  <button class="btn btn-outline btn-sm" style="border-color:#555;color:#ccc" onclick="refreshStatus()">↻ Refresh</button>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+  <span class="status-label">Files:</span>
+  <span id="pill-sources" class="pill missing"><span class="dot"></span>Research</span>
+  <span id="pill-draft"   class="pill missing"><span class="dot"></span>Draft</span>
+  <span id="pill-image"   class="pill missing"><span class="dot"></span>Image</span>
+</div>
+
+<div class="main">
+
+  <!-- ── Topic Ideas ───────────────────────────────────────── -->
+  <div class="topics-section">
+    <div class="topics-header">
+      <div>
+        <h2>SEO Topic Ideas</h2>
+        <p>AI-generated topics ranked by search opportunity — click one to select it</p>
+      </div>
+      <button class="btn btn-gold btn-sm" id="btn-suggest" onclick="suggestTopics(this)" style="margin-left:auto;flex-shrink:0">
+        ✦ Suggest Topics
+      </button>
+    </div>
+    <div class="topics-body">
+      <div id="topics-grid" class="topics-grid" style="display:none"></div>
+      <div id="topics-placeholder" class="topics-placeholder">
+        <span>✦</span>
+        Click "Suggest Topics" to get 6 SEO-optimized topic ideas for your service area.<br>
+        Click any card to select it, then run the workflow below.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Topic & Keyword bar ───────────────────────────────── -->
+  <div class="topic-bar">
+    <div class="topic-bar-row">
+      <label>Topic:</label>
+      <div class="topic-input-wrap">
+        <input id="topic-input" type="text" placeholder="e.g. Moving to Kalamazoo Michigan: 12 Things to Know" autocomplete="off">
+      </div>
+      <label style="white-space:nowrap">Primary Keyword:</label>
+      <div class="keyword-input-wrap">
+        <input id="keyword-input" type="text" placeholder="e.g. moving to kalamazoo michigan" autocomplete="off">
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="saveTopic()">Save</button>
+      <span id="topic-flash" class="save-flash">Saved!</span>
+    </div>
+  </div>
+
+  <!-- ── Steps ──────────────────────────────────────────────── -->
+  <div class="steps">
+
+    <!-- Step 1: Research -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">1</div>
+        <div><h2>Pull Research</h2><p>Market data + local news</p></div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Pulls current market data from Tavily Search, Zillow Research, and GKAR for the topic and cities in your service area.</p>
+        <button class="btn btn-primary btn-full" id="btn-research" onclick="runResearch(this)">Pull Research</button>
+        <div class="section-label">Research Data</div>
+        <div id="sources-display" class="sources-panel">Run Step 1 to see data here.</div>
+      </div>
+    </div>
+
+    <!-- Step 2: Write Draft -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">2</div>
+        <div><h2>Write the Draft</h2><p>AI writes · you review · you edit</p></div>
+      </div>
+      <div class="card-body">
+        <p class="card-desc">Claude AI writes the full SEO blog post using the research and your topic — in your voice, following all the rules from CLAUDE.md. Review and edit before moving on.</p>
+        <div id="api-key-warning" style="display:none;background:#fff8e1;border:1px solid #f9a825;border-radius:6px;padding:10px 12px;font-size:12px;color:#6d4c00;line-height:1.5">
+          <strong>ANTHROPIC_API_KEY not set.</strong> Open <code>config/.env</code> and add your key.
+        </div>
+        <button class="btn btn-gold btn-full" id="btn-write" onclick="runPhase('write_draft', this)">
+          Write Draft with AI
+        </button>
+        <hr class="divider">
+        <div class="draft-toolbar">
+          <span class="section-label" style="align-self:center">Draft Editor</span>
+          <button class="btn btn-outline btn-sm" onclick="saveDraft()">💾 Save</button>
+          <button class="btn btn-outline btn-sm" onclick="loadDraft()">↻ Reload</button>
+          <span id="save-flash" class="save-flash">Saved!</span>
+          <span id="draft-chars" class="draft-hint">0 words</span>
+        </div>
+        <textarea id="draft-editor" class="draft-area" placeholder="Click 'Write Draft with AI' or paste your draft here. Cmd+S to save."></textarea>
+      </div>
+    </div>
+
+    <!-- Step 3: Review & Publish -->
+    <div class="card">
+      <div class="card-header">
+        <div class="step-num">3</div>
+        <div><h2>Review &amp; Publish</h2><p>SEO check · image · Notion</p></div>
+      </div>
+      <div class="card-body">
+
+        <!-- SEO Check -->
+        <div class="section-label">SEO Check</div>
+        <button class="btn btn-primary btn-full" id="btn-seo" onclick="runSeoCheck(this)">Run SEO Check</button>
+        <div id="seo-results-wrap" style="display:none">
+          <div id="seo-score" class="seo-score-bar">—</div>
+          <div id="seo-results" class="seo-results"></div>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Hero Image -->
+        <div class="section-label">Hero Image</div>
+        <div class="image-panel" id="image-panel">
+          <div class="image-placeholder"><span>🖼</span>Generate in Step 3.</div>
+        </div>
+        <div class="row">
+          <button class="btn btn-outline btn-sm btn-full" id="btn-image" onclick="runPhase('image', this)">Generate Image</button>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Quality checks -->
+        <div class="row">
+          <button class="btn btn-outline btn-sm" id="btn-voice" onclick="runPhase('voice_check', this)">Voice Check</button>
+          <button class="btn btn-outline btn-sm" id="btn-spell" onclick="runPhase('spellcheck', this)">Spell Check</button>
+          <button class="btn btn-outline btn-sm" onclick="openOutput()">Open Folder</button>
+        </div>
+
+        <hr class="divider">
+
+        <!-- Publish -->
+        <button class="btn btn-success btn-full" id="btn-publish" onclick="runPhase('publish', this)">Publish to Notion</button>
+        <button class="btn btn-outline btn-sm btn-full" id="btn-mark" onclick="markPublished()">✓ Mark Keyword as Published</button>
+      </div>
+    </div>
+
+  </div><!-- /.steps -->
+
+  <!-- ── SEO / Copy Fields ───────────────────────────────────── -->
+  <div class="seo-fields">
+    <div class="seo-fields-header">
+      <div class="step-num" style="background:#c8a96e">4</div>
+      <div><h2 style="font-size:14px;font-weight:600">Blog Fields</h2><p style="font-size:11px;color:#c8a96e">Copy into your CMS when publishing</p></div>
+      <button class="btn btn-outline btn-sm" style="margin-left:auto;border-color:#555;color:#aaa" onclick="loadSeoFields()">↻ Refresh</button>
+    </div>
+    <div class="seo-fields-grid">
+      <div class="seo-field-cell">
+        <div class="section-label" style="margin-bottom:6px">Title (H1 / Page Title)</div>
+        <div id="seo-title" style="font-size:13px;font-weight:600;color:#1a2e44;margin-bottom:8px;line-height:1.4">(run steps 1–3 first)</div>
+        <button class="btn btn-outline btn-sm" onclick="copyField('seo-title')">Copy</button>
+      </div>
+      <div class="seo-field-cell">
+        <div class="section-label" style="margin-bottom:6px">URL Slug</div>
+        <div id="seo-slug" style="font-size:12px;font-family:monospace;color:#1a6b9e;margin-bottom:8px;word-break:break-all">—</div>
+        <button class="btn btn-outline btn-sm" onclick="copyField('seo-slug')">Copy</button>
+      </div>
+      <div class="seo-field-cell" style="border-right:none">
+        <div class="section-label" style="margin-bottom:6px">Primary Keyword</div>
+        <div id="seo-keyword" style="font-size:12px;font-family:monospace;color:#1a2e44;margin-bottom:8px">—</div>
+        <button class="btn btn-outline btn-sm" onclick="copyField('seo-keyword')">Copy</button>
+      </div>
+    </div>
+    <div class="seo-field-cell2">
+      <div>
+        <div class="section-label" style="margin-bottom:6px">Meta Description (140–155 chars)</div>
+        <div id="seo-desc" style="font-size:12px;color:#3a4a5a;margin-bottom:4px;line-height:1.5">—</div>
+        <div id="seo-desc-len" style="font-size:10px;color:#8492a6;margin-bottom:6px"></div>
+        <button class="btn btn-outline btn-sm" onclick="copyField('seo-desc')">Copy</button>
+      </div>
+      <div>
+        <div class="section-label" style="margin-bottom:6px">Image Alt Text + Download</div>
+        <div id="seo-alt" style="font-size:12px;color:#3a4a5a;margin-bottom:8px">—</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-outline btn-sm" onclick="copyField('seo-alt')">Copy Alt Text</button>
+          <a class="btn btn-success btn-sm" href="/hero_image" download="hero_image.jpg">Download Image</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Log Console ─────────────────────────────────────────── -->
+  <div class="console-card">
+    <div class="console-header">
+      <span>Live Log</span>
+      <span id="run-badge"></span>
+      <span id="console-status">Idle</span>
+      <button class="btn btn-outline btn-sm" style="border-color:#444;color:#aaa;margin-left:8px" onclick="clearConsole()">Clear</button>
+    </div>
+    <div id="console">Ready. Suggest topics above, or set a topic and run Step 1.</div>
+  </div>
+
+</div>
+
+<script>
+// ── Status ─────────────────────────────────────────────────────────────────
+async function refreshStatus() {
+  const r = await fetch("/status");
+  const s = await r.json();
+  setPill("pill-sources", s.sources, "Research", s.sources_mtime);
+  setPill("pill-draft",   s.draft,   "Draft",    s.draft_mtime);
+  setPill("pill-image",   s.image,   "Image",    s.image_mtime);
+  if (s.sources) loadSources();
+  loadImageInfo();
+}
+function setPill(id, ok, label, mtime) {
+  const el = document.getElementById(id);
+  el.className = "pill " + (ok ? "ok" : "missing");
+  el.innerHTML = `<span class="dot"></span>${label}${mtime ? ` <span style="color:#888;font-weight:400">${mtime}</span>` : ""}`;
+}
+
+// ── Topic Suggestions ──────────────────────────────────────────────────────
+let _suggestedTopics = [];
+
+async function suggestTopics(btn) {
+  if (activeTask) { appendLog("⚠ Another task is already running.", "warn"); return; }
+  const origLabel = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner" style="border-top-color:#1a2e44"></span> Generating…`;
+  document.getElementById("topics-placeholder").innerHTML = `<span>⏳</span>Asking Claude to suggest topics for your service area…`;
+
+  try {
+    const r = await fetch("/suggest_topics", { method: "POST" });
+    const data = await r.json();
+    if (data.error) {
+      document.getElementById("topics-placeholder").innerHTML = `<span>⚠</span>${data.error}`;
+    } else {
+      renderTopics(data.topics || []);
+    }
+  } catch(e) {
+    document.getElementById("topics-placeholder").innerHTML = `<span>⚠</span>Failed: ${e}`;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = origLabel;
+  }
+}
+
+function renderTopics(topics) {
+  _suggestedTopics = topics;
+  const grid = document.getElementById("topics-grid");
+  const placeholder = document.getElementById("topics-placeholder");
+  if (!topics.length) {
+    placeholder.innerHTML = `<span>⚠</span>No topics returned. Try again.`;
+    return;
+  }
+  placeholder.style.display = "none";
+  grid.style.display = "grid";
+
+  const clusterClass = { "community-guides": "tag-community", "market-updates": "tag-market", "buyer-education": "tag-buyer", "homes-for-heroes": "tag-heroes" };
+  const clusterLabel = { "community-guides": "Community Guide", "market-updates": "Market Update", "buyer-education": "Buyer Education", "homes-for-heroes": "Homes for Heroes" };
+  const tierClass = { "tier-1": "tag-tier1", "tier-2": "tag-tier2", "tier-3": "tag-tier3" };
+
+  grid.innerHTML = topics.map((t, i) => `
+    <div class="topic-card" id="topic-card-${i}" onclick="selectTopic(${i})">
+      <div class="topic-card-title">${escHtml(t.title)}</div>
+      <div class="topic-card-keyword">${escHtml(t.keyword || "")}</div>
+      <div class="topic-card-meta">
+        ${t.cluster ? `<span class="topic-tag ${clusterClass[t.cluster] || "tag-market"}">${clusterLabel[t.cluster] || t.cluster}</span>` : ""}
+        ${t.tier ? `<span class="topic-tag ${tierClass[t.tier] || ""}">${t.tier.replace("-"," ")}</span>` : ""}
+      </div>
+      <div class="topic-card-rationale">${escHtml(t.rationale || "")}</div>
+      ${t.target_length ? `<div class="topic-card-length">🎯 ${escHtml(t.target_length)}</div>` : ""}
+    </div>
+  `).join("");
+}
+
+function selectTopic(i) {
+  const t = _suggestedTopics[i];
+  if (!t) return;
+  document.querySelectorAll(".topic-card").forEach(c => c.classList.remove("selected"));
+  document.getElementById(`topic-card-${i}`).classList.add("selected");
+  document.getElementById("topic-input").value = t.title || "";
+  document.getElementById("keyword-input").value = t.keyword || "";
+  saveTopic().then(() => runFullPipeline());
+}
+
+async function runFullPipeline() {
+  clearConsole();
+  appendLog("▶ Topic selected — pulling research, then writing draft…", "ok");
+
+  const researchOk = await runPhaseAsync("research", document.getElementById("btn-research"), "Pull Research");
+  if (!researchOk) {
+    appendLog("✗ Research failed. Check the log and retry from Step 1.", "err");
+    return;
+  }
+  loadSources();
+  appendLog("──────────────────────────────────────", "info");
+  appendLog("Research done. Writing draft now…", "ok");
+
+  const draftOk = await runPhaseAsync("write_draft", document.getElementById("btn-write"), "Write Draft with AI");
+  if (!draftOk) {
+    appendLog("✗ Draft failed. Click 'Write Draft with AI' to retry.", "err");
+    return;
+  }
+  loadDraft();
+  loadSeoFields();
+  appendLog("──────────────────────────────────────", "info");
+  appendLog("✓ Draft ready! Review it in the editor, then run the SEO Check.", "ok");
+}
+
+function runPhaseAsync(phase, btn, label) {
+  return new Promise(async (resolve) => {
+    if (activeTask) { appendLog("⚠ Another task is already running.", "warn"); resolve(false); return; }
+    if (btn) setRunning(true, btn, label);
+
+    let body;
+    try {
+      const r = await fetch(`/run/${phase}`, { method: "POST" });
+      body = await r.json();
+    } catch(e) {
+      appendLog(`✗ Network error: ${e}`, "err");
+      if (btn) setRunning(false, btn, label);
+      resolve(false); return;
+    }
+
+    if (body.error) {
+      appendLog(`✗ ${body.error}`, "err");
+      if (btn) setRunning(false, btn, label);
+      resolve(false); return;
+    }
+
+    activeTask = body.task_id;
+    const es = new EventSource(`/stream/${activeTask}`);
+    es.onmessage = (e) => {
+      const line = e.data;
+      if (line.startsWith("__EXIT__")) {
+        const code = parseInt(line.replace("__EXIT__", ""), 10);
+        es.close(); activeTask = null;
+        if (btn) setRunning(false, btn, label);
+        refreshStatus();
+        resolve(code === 0);
+      } else {
+        appendLog(line, classForLine(line));
+      }
+    };
+    es.onerror = () => {
+      es.close(); activeTask = null;
+      if (btn) setRunning(false, btn, label);
+      resolve(false);
+    };
+  });
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// ── Topic & Keyword ────────────────────────────────────────────────────────
+async function loadTopic() {
+  const r = await fetch("/topic");
+  const text = await r.text();
+  document.getElementById("topic-input").value = text;
+}
+
+async function saveTopic() {
+  const topic   = document.getElementById("topic-input").value.trim();
+  const keyword = document.getElementById("keyword-input").value.trim();
+  await fetch("/topic", {
+    method: "POST",
+    body: JSON.stringify({ topic, keyword }),
+    headers: { "Content-Type": "application/json" }
+  });
+  const flash = document.getElementById("topic-flash");
+  flash.classList.add("show");
+  setTimeout(() => flash.classList.remove("show"), 1600);
+}
+
+// ── Draft ──────────────────────────────────────────────────────────────────
+async function loadDraft() {
+  const r = await fetch("/draft");
+  const text = await r.text();
+  document.getElementById("draft-editor").value = text;
+  updateWordCount();
+}
+
+async function saveDraft() {
+  const content = document.getElementById("draft-editor").value;
+  await fetch("/draft", { method: "POST", body: content, headers: { "Content-Type": "text/plain" } });
+  const flash = document.getElementById("save-flash");
+  flash.classList.add("show");
+  setTimeout(() => flash.classList.remove("show"), 1600);
+  refreshStatus();
+}
+
+function updateWordCount() {
+  const v = document.getElementById("draft-editor").value;
+  const words = v.trim() ? v.trim().split(/\s+/).length : 0;
+  document.getElementById("draft-chars").textContent = `${words} words`;
+}
+
+// ── Sources ────────────────────────────────────────────────────────────────
+async function loadSources() {
+  const r = await fetch("/sources");
+  document.getElementById("sources-display").textContent = await r.text();
+}
+
+// ── Image ──────────────────────────────────────────────────────────────────
+async function loadImageInfo() {
+  const r = await fetch("/image_info");
+  const data = await r.json();
+  const url = data.image_url || "";
+  const panel = document.getElementById("image-panel");
+  if (url) {
+    panel.innerHTML = `<img src="${url}" alt="Hero image" onerror="this.parentElement.innerHTML='<div class=\\'image-placeholder\\'><span>⚠</span>Image URL found but preview failed.</div>'">`;
+  } else if (data.local_exists) {
+    panel.innerHTML = `<img src="/hero_image?t=${Date.now()}" alt="Hero image">`;
+  } else {
+    panel.innerHTML = `<div class="image-placeholder"><span>🖼</span>Click "Generate Image" in Step 3.</div>`;
+  }
+}
+
+// ── SEO Check ─────────────────────────────────────────────────────────────
+async function runSeoCheck(btn) {
+  if (activeTask) { appendLog("⚠ Another task is already running.", "warn"); return; }
+  clearConsole();
+  appendLog("▶ Running SEO check…", "ok");
+  setRunning(true, btn, "Run SEO Check");
+
+  const r = await fetch("/run/seo_check", { method: "POST" });
+  const body = await r.json();
+
+  if (body.error) {
+    appendLog(`✗ ${body.error}`, "err");
+    setRunning(false, btn, "Run SEO Check");
+    return;
+  }
+
+  const { task_id } = body;
+  activeTask = task_id;
+  const es = new EventSource(`/stream/${task_id}`);
+  let fullOutput = "";
+
+  es.onmessage = (e) => {
+    const line = e.data;
+    if (line.startsWith("__EXIT__")) {
+      const code = parseInt(line.replace("__EXIT__", ""), 10);
+      try {
+        const result = JSON.parse(fullOutput);
+        renderSeoResults(result);
+      } catch(err) {
+        appendLog("Could not parse SEO check output.", "warn");
+      }
+      if (code === 0) { appendLog("✓ SEO check passed.", "ok"); setBadge("done"); }
+      else             { appendLog("⚠ SEO check found issues. See results above.", "warn"); setBadge("done"); }
+      es.close(); activeTask = null; setRunning(false, btn, "Run SEO Check");
+    } else {
+      fullOutput += line;
+      appendLog(line, "info");
+    }
+  };
+  es.onerror = () => { es.close(); activeTask = null; setRunning(false, btn, "Run SEO Check"); };
+}
+
+function renderSeoResults(result) {
+  const wrap = document.getElementById("seo-results-wrap");
+  const score = document.getElementById("seo-score");
+  const list  = document.getElementById("seo-results");
+  wrap.style.display = "block";
+
+  const pass = result.pass;
+  score.textContent = `${pass ? "✓ PASS" : "✗ FAIL"} — ${result.required_score || result.score} required checks · ${result.score} total`;
+  score.className = "seo-score-bar" + (pass ? "" : " fail");
+
+  list.innerHTML = (result.checks || []).map(c => `
+    <div class="seo-check-item">
+      <span class="seo-icon">${c.pass ? "✓" : (c.required ? "✗" : "○")}</span>
+      <span class="seo-check-name">${c.check.replace(/_/g," ")}</span>
+      <span class="seo-check-detail">${escHtml(c.detail || "")}</span>
+    </div>
+  `).join("");
+}
+
+// ── Mark Published ─────────────────────────────────────────────────────────
+async function markPublished() {
+  const r = await fetch("/mark_published", { method: "POST" });
+  const data = await r.json();
+  if (data.error) appendLog(`✗ ${data.error}`, "err");
+  else appendLog(`✓ Keyword "${data.keyword}" added to published/keywords.csv`, "ok");
+}
+
+// ── Run phases (SSE streaming) ─────────────────────────────────────────────
+let activeTask = null;
+
+async function runResearch(btn) {
+  await saveTopic();
+  runPhase("research", btn);
+}
+
+async function runPhase(phase, btn) {
+  if (activeTask) { appendLog("⚠ Another task is already running.", "warn"); return; }
+
+  const labels = {
+    research:    "Pull Research",
+    write_draft: "Write Draft with AI",
+    image:       "Generate Image",
+    publish:     "Publish to Notion",
+    voice_check: "Voice Check",
+    spellcheck:  "Spell Check",
+  };
+  const label = labels[phase] || phase;
+
+  clearConsole();
+  appendLog(`▶ ${label}…`, "ok");
+  setRunning(true, btn, label);
+
+  const r = await fetch(`/run/${phase}`, { method: "POST" });
+  const body = await r.json();
+  if (body.error) {
+    appendLog(`✗ ${body.error}`, "err");
+    setRunning(false, btn, label);
+    return;
+  }
+
+  activeTask = body.task_id;
+  const es = new EventSource(`/stream/${activeTask}`);
+
+  es.onmessage = (e) => {
+    const line = e.data;
+    if (line.startsWith("__EXIT__")) {
+      const code = parseInt(line.replace("__EXIT__",""), 10);
+      if (code === 0) {
+        appendLog("✓ Done.", "ok"); setBadge("done");
+        if (phase === "research") {
+          appendLog("─────────────────────────────────────", "info");
+          appendLog("Research ready. Click 'Write Draft with AI' to generate the post.", "ok");
+          loadSources();
+        } else if (phase === "write_draft") {
+          appendLog("─────────────────────────────────────", "info");
+          appendLog("Draft written. Review and edit in the editor above, then run the SEO Check.", "ok");
+          loadDraft(); loadSeoFields();
+        } else if (phase === "image") {
+          appendLog("Image generated. Check the preview panel.", "ok");
+          loadImageInfo(); loadSeoFields();
+        } else if (phase === "publish") {
+          appendLog("Published to Notion! Click 'Mark Keyword as Published' to track it.", "ok");
+        }
+      } else {
+        appendLog(`✗ Failed (exit ${code}).`, "err"); setBadge("error");
+      }
+      es.close(); activeTask = null; setRunning(false, btn, label); refreshStatus();
+    } else {
+      appendLog(line, classForLine(line));
+    }
+  };
+  es.onerror = () => { es.close(); activeTask = null; setRunning(false, btn, label); refreshStatus(); };
+}
+
+function classForLine(line) {
+  const l = line.toLowerCase();
+  if (l.includes("error") || l.includes("failed") || l.includes("✗")) return "err";
+  if (l.includes("warning") || l.includes("warn") || l.includes("⚠"))  return "warn";
+  if (l.includes("✓") || l.includes("success") || l.includes("done"))  return "ok";
+  return "info";
+}
+
+// ── Console ────────────────────────────────────────────────────────────────
+function appendLog(text, cls="info") {
+  const c = document.getElementById("console");
+  const d = document.createElement("div");
+  d.className = `line-${cls}`;
+  d.textContent = text;
+  c.appendChild(d);
+  c.scrollTop = c.scrollHeight;
+  document.getElementById("console-status").textContent = new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+}
+function clearConsole() { document.getElementById("console").innerHTML = ""; setBadge(""); }
+function setBadge(type) {
+  const el = document.getElementById("run-badge");
+  if (!type) { el.innerHTML=""; return; }
+  const labels = {running:"Running",done:"Done",error:"Error"};
+  el.innerHTML = `<span class="badge badge-${type}">${labels[type]||type}</span>`;
+}
+
+function setRunning(running, btn, label) {
+  document.querySelectorAll(".btn").forEach(b => b.disabled = running);
+  if (btn) {
+    if (running) btn.innerHTML = `<span class="spinner"></span> Running…`;
+    else if (label) btn.innerHTML = label;
+  }
+}
+
+// ── SEO Fields ─────────────────────────────────────────────────────────────
+async function loadSeoFields() {
+  const r = await fetch("/seo_fields");
+  const d = await r.json();
+  if (!d.title) return;
+  document.getElementById("seo-title").textContent   = d.title || "—";
+  document.getElementById("seo-slug").textContent    = d.slug  || "—";
+  document.getElementById("seo-keyword").textContent = d.keyword || "—";
+  document.getElementById("seo-desc").textContent    = d.description || "—";
+  document.getElementById("seo-alt").textContent     = d.alt_text || "—";
+  const descLen = (d.description || "").length;
+  const descEl  = document.getElementById("seo-desc-len");
+  descEl.textContent = descLen ? `${descLen} chars ${descLen < 140 ? "⚠ too short" : descLen > 155 ? "⚠ too long" : "✓ good length"}` : "";
+  // Pre-fill keyword input if empty
+  if (d.keyword && !document.getElementById("keyword-input").value) {
+    document.getElementById("keyword-input").value = d.keyword;
+  }
+}
+
+function copyField(id) {
+  const text = document.getElementById(id).textContent.trim();
+  if (!text || text === "—") return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector(`[onclick="copyField('${id}')"]`);
+    if (btn) { const orig = btn.textContent; btn.textContent = "Copied!"; setTimeout(()=> btn.textContent=orig, 1500); }
+  });
+}
+
+async function openOutput() { await fetch("/open_output"); }
+
+// ── API key check ──────────────────────────────────────────────────────────
+async function checkApiKey() {
+  const r = await fetch("/check_anthropic_key");
+  const d = await r.json();
+  document.getElementById("api-key-warning").style.display = d.set ? "none" : "block";
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("draft-editor").addEventListener("input", updateWordCount);
+  document.getElementById("draft-editor").addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === "s") { e.preventDefault(); saveDraft(); }
+  });
+  document.getElementById("topic-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") saveTopic();
+  });
+  loadTopic();
+  loadDraft();
+  loadSeoFields();
+  refreshStatus();
+  checkApiKey();
+  setInterval(refreshStatus, 12000);
+});
+</script>
+</body>
+</html>
