@@ -62,7 +62,7 @@ OUTPUT FORMAT — you must return ONLY the markdown file content, starting with 
 title: [Post title — under 60 chars]
 slug: [url-slug-lowercase-hyphenated]
 seo_title: [Same as title or slight variation — under 60 chars]
-seo_description: [140-155 char meta description with keyword, written as a hook]
+seo_description: [CRITICAL: exactly 140-155 characters. Must contain the primary keyword verbatim. Written as a hook. Count carefully — no more than 155 chars total. Example at 148 chars: "Thinking about moving to Portage Michigan? Here are 10 honest things to know — from home prices to schools — before you make the move."]
 keyword: [primary SEO keyword]
 dek: [1-2 sentence subheadline / deck for the post]
 cluster: [community-guides | market-updates | buyer-education | homes-for-heroes]
@@ -143,6 +143,19 @@ Write the complete blog post now. Return ONLY the markdown content starting with
         draftContent = draftContent.replace('---\n', `---\ndate: ${todayStr}\n`)
       }
     }
+
+    // Auto-fix meta description: trim to 155 chars at word boundary if over
+    draftContent = draftContent.replace(
+      /^(seo_description:\s*)(.+)$/m,
+      (_match, prefix, desc) => {
+        let fixed = desc.trim()
+        if (fixed.length > 155) {
+          fixed = fixed.substring(0, 155).replace(/\s\S*$/, '').trim()
+          onLog(`⚠ seo_description trimmed to ${fixed.length} chars to fit 140-155 limit.`)
+        }
+        return `${prefix}${fixed}`
+      }
+    )
 
     // Save draft to Supabase Storage
     onLog('Saving draft.md to storage…')
