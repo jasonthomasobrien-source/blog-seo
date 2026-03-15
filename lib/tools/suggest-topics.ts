@@ -25,7 +25,7 @@ const CONTENT_TYPES = [
 // ── Live blog scraper ─────────────────────────────────────────────────────────
 
 async function fetchBlogPostsFromSite(): Promise<string[]> {
-  const baseUrl = (process.env.BLOG_SITE_URL || 'https://jobrienhomes.com/blog').replace(/\/$/, '')
+  const baseUrl = (process.env.BLOG_SITE_URL || 'https://joissellingwestmichigan.com/west-mi-blog').replace(/\/$/, '')
   const titles: string[] = []
 
   // Selectors that commonly wrap post titles in GHL and other blog platforms
