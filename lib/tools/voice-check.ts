@@ -128,7 +128,7 @@ function checkEmojiInBody(text: string): VoiceFlag[] {
   // Strip the first H1 heading before checking
   const body = text.replace(/^#[^\n]*\n/m, '')
   const emojiPattern =
-    /[\u2600-\u27BF\u1F300-\u1F9FF\u1FA00-\u1FA6F\u1FA70-\u1FAFF\u2702-\u27B0\u24C2-\u1F251]/gu
+    /\p{Emoji}/gu
   const matches = body.match(emojiPattern) || []
   if (matches.length) {
     return [{

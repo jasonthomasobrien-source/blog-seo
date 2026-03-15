@@ -1,23 +1,13 @@
-import { supabase } from '@/lib/supabase'
-
-const BUCKET = 'blog'
+import { readFileBytes } from '@/lib/storage'
 
 export async function GET() {
   try {
-    const { data, error } = await supabase.storage.from(BUCKET).download('hero_image.jpg')
-    if (error || !data) {
-      return new Response('Image not found', { status: 404 })
-    }
-
-    const arrayBuffer = await data.arrayBuffer()
-    return new Response(arrayBuffer, {
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'no-cache',
-      },
+    const buffer = await readFileBytes('hero_image.jpg')
+    if (!buffer) return new Response('Image not found', { status: 404 })
+    return new Response(buffer, {
+      headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-cache' },
     })
   } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e)
-    return new Response(`Error: ${msg}`, { status: 500 })
+    return new Response(`Error: ${e instanceof Error ? e.message : String(e)}`, { status: 500 })
   }
 }
