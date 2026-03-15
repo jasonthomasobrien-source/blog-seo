@@ -95,7 +95,7 @@ export async function sendToGhl(
       status: 'DRAFT',
       description,
       ...(slug && { urlSlug: slug }),
-      ...(imageUrl && { featuredImage: imageUrl }),
+      ...(imageUrl && { imageUrl }),
     }
 
     const resp = await fetch('https://services.leadconnectorhq.com/blogs/posts', {
