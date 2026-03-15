@@ -7,7 +7,7 @@ import { generateImage } from '@/lib/tools/generate-image'
 import { runSeoCheck } from '@/lib/tools/seo-check'
 import { runSpellcheck } from '@/lib/tools/spellcheck'
 import { runVoiceCheck } from '@/lib/tools/voice-check'
-import { sendToNotion } from '@/lib/tools/send-notion'
+import { sendToGhl } from '@/lib/tools/send-ghl'
 import { getConfig } from '@/lib/storage'
 
 export async function POST(
@@ -45,7 +45,7 @@ export async function POST(
           result = { success: seoResult.success, error: seoResult.error }
 
         } else if (phase === 'publish') {
-          result = await sendToNotion(send)
+          result = await sendToGhl(send)
 
         } else if (phase === 'spellcheck') {
           result = await runSpellcheck(send)

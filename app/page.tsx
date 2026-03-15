@@ -438,7 +438,7 @@ export default function Dashboard() {
         loadImageInfo()
         loadSeoFields()
       } else if (phase === 'publish') {
-        appendLog("Published to Notion! Click 'Mark Keyword as Published' to track it.", 'ok')
+        appendLog("Sent to GHL as draft! Open GHL → Blogs to review and publish.", 'ok')
       }
     }
   }
@@ -834,12 +834,12 @@ export default function Dashboard() {
               <button
                 className="btn btn-success btn-full"
                 id="btn-publish"
-                onClick={() => runPhase('publish', 'Publish to Notion')}
+                onClick={() => runPhase('publish', 'Publish to GHL')}
                 disabled={running}
               >
-                {running && runningBtn === 'Publish to Notion'
+                {running && runningBtn === 'Publish to GHL'
                   ? <><span className="spinner"></span> Running…</>
-                  : 'Publish to Notion'}
+                  : 'Publish to GHL'}
               </button>
               <button
                 className="btn btn-outline btn-sm btn-full"
