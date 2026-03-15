@@ -4,7 +4,7 @@ export async function GET() {
   try {
     const buffer = await readFileBytes('hero_image.jpg')
     if (!buffer) return new Response('Image not found', { status: 404 })
-    return new Response(buffer, {
+    return new Response(new Uint8Array(buffer), {
       headers: { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-cache' },
     })
   } catch (e: unknown) {
