@@ -119,7 +119,7 @@ export async function sendToGhl(
       return { success: false, error: `GHL API error: ${msg}` }
     }
 
-    const postId = data?.id || data?.post?.id || ''
+    const postId = (data as { id?: string; post?: { id?: string } })?.id || (data as { post?: { id?: string } })?.post?.id || ''
     const postUrl = postId
       ? `https://app.gohighlevel.com/location/${locationId}/blogs/posts/${postId}`
       : ''
