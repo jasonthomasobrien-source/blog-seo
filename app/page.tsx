@@ -15,6 +15,7 @@ interface Topic {
 
 interface TopicDebug {
   ghl_posts_found?: number
+  site_scraped?: number
   redis_keywords?: number
   total_excluded?: number
   covered_cities?: number
@@ -641,7 +642,7 @@ export default function Dashboard() {
               {topicsDebug && (
                 <p style={{ fontSize: '11px', color: '#8492a6', marginTop: '2px' }}>
                   Excluded {topicsDebug.total_excluded ?? 0} existing posts
-                  ({topicsDebug.ghl_posts_found ?? 0} from GHL · {topicsDebug.redis_keywords ?? 0} tracked keywords) ·
+                  ({topicsDebug.site_scraped ?? 0} scraped from site · {topicsDebug.redis_keywords ?? 0} tracked · {topicsDebug.ghl_posts_found ?? 0} from GHL) ·
                   {topicsDebug.uncovered_cities ?? 0} cities uncovered
                 </p>
               )}

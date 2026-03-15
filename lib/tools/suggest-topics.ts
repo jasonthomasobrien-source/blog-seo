@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
+import * as cheerio from 'cheerio'
 import { getPublishedKeywords } from '../storage'
 
 // Full city list across all tiers — used for gap analysis
@@ -20,6 +21,69 @@ const CONTENT_TYPES = [
   '[city] schools and family life',
   'buying a home in [city] michigan',
 ]
+
+// ── Live blog scraper ─────────────────────────────────────────────────────────
+
+async function fetchBlogPostsFromSite(): Promise<string[]> {
+  const baseUrl = (process.env.BLOG_SITE_URL || 'https://jobrienhomes.com/blog').replace(/\/$/, '')
+  const titles: string[] = []
+
+  // Selectors that commonly wrap post titles in GHL and other blog platforms
+  const TITLE_SELECTORS = [
+    'h1', 'h2', 'h3',
+    '[class*="post-title"]', '[class*="blog-title"]', '[class*="entry-title"]',
+    '[class*="card-title"]', '[class*="article-title"]',
+    'article h2', 'article h3', '.post h2', '.post h3',
+  ]
+
+  async function scrapePage(url: string): Promise<string[]> {
+    try {
+      const resp = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BlogSEO/1.0)' },
+        signal: AbortSignal.timeout(10000),
+      })
+      if (!resp.ok) return []
+      const html = await resp.text()
+      const $ = cheerio.load(html)
+
+      const found: string[] = []
+      const seen = new Set<string>()
+
+      for (const sel of TITLE_SELECTORS) {
+        $(sel).each((_, el) => {
+          const text = $(el).text().trim()
+          // Filter: must be a plausible blog title (10–120 chars, not nav/button text)
+          if (text.length >= 10 && text.length <= 120 && !seen.has(text.toLowerCase())) {
+            seen.add(text.toLowerCase())
+            found.push(text)
+          }
+        })
+      }
+
+      return found
+    } catch (e) {
+      console.log(`[suggest-topics] Blog scrape error for ${url}: ${e}`)
+      return []
+    }
+  }
+
+  // Scrape first page, then check for pagination (up to 5 pages)
+  const firstPage = await scrapePage(baseUrl)
+  titles.push(...firstPage)
+
+  for (let page = 2; page <= 5; page++) {
+    const pageUrl = `${baseUrl}?page=${page}`
+    const pageTitles = await scrapePage(pageUrl)
+    if (pageTitles.length === 0) break // no more pages
+    // Only continue if we got new titles
+    const newOnes = pageTitles.filter(t => !titles.includes(t))
+    if (newOnes.length === 0) break
+    titles.push(...newOnes)
+  }
+
+  console.log(`[suggest-topics] Scraped ${titles.length} titles from ${baseUrl}`)
+  return titles
+}
 
 interface GhlFetchResult {
   titles: string[]
@@ -152,6 +216,9 @@ export async function suggestTopics(
     const ghlResult = await fetchGhlPosts()
     const ghlTitles = ghlResult.titles
 
+    // Scrape live blog for existing posts (most reliable source)
+    const scrapedTitles = await fetchBlogPostsFromSite()
+
     const client = new Anthropic({ apiKey })
 
     const now = new Date()
@@ -162,6 +229,7 @@ export async function suggestTopics(
     // All known titles + keywords for exclusion — deduplicated across sources
     const allTitlesAndKeywords = Array.from(new Set([
       ...ghlTitles,
+      ...scrapedTitles,
       ...publishedKeywords,
       ...publishedEntries.map(e => e.title || '').filter(Boolean),
     ]))
@@ -261,6 +329,7 @@ Make exactly ${count} topics. Sort from highest-priority gap to lowest. Fill unc
       topics,
       debug: {
         ghl_posts_found: ghlResult.fetchedCount,
+        site_scraped: scrapedTitles.length,
         redis_keywords: publishedKeywords.length,
         total_excluded: allTitlesAndKeywords.length,
         covered_cities: coveredCityGuides.length,
