@@ -28,23 +28,32 @@ async function fetchGhlPosts(): Promise<string[]> {
 
   if (!apiKey || !locationId || !blogId) return []
 
-  try {
-    const resp = await fetch(
-      `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100`,
-      {
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          Version: '2021-07-28',
-        },
+  const titles: string[] = []
+
+  // Fetch both DRAFT and PUBLISHED posts to catch everything
+  for (const status of ['DRAFT', 'PUBLISHED']) {
+    try {
+      const resp = await fetch(
+        `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=${status}`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            Version: '2021-07-28',
+          },
+        }
+      )
+      if (!resp.ok) continue
+      const data = await resp.json() as { posts?: Array<{ title?: string }> }
+      for (const p of data.posts || []) {
+        if (p.title && !titles.includes(p.title)) titles.push(p.title)
       }
-    )
-    if (!resp.ok) return []
-    const data = await resp.json() as { posts?: Array<{ title?: string }> }
-    return (data.posts || []).map(p => p.title || '').filter(Boolean)
-  } catch {
-    return []
+    } catch {
+      // ignore — continue with other status
+    }
   }
+
+  return titles
 }
 
 const SYSTEM_PROMPT = `You are an SEO content strategist for Jason O'Brien, a REALTOR® at PREMIERE Group at Real Broker, LLC, serving the Kalamazoo/West Michigan area. Jason's website is jobrienhomes.com.

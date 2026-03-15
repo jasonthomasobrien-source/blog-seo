@@ -1,4 +1,5 @@
 import * as cheerio from 'cheerio'
+import Anthropic from '@anthropic-ai/sdk'
 import { writeFile, readFile } from '../storage'
 
 const ZILLOW_CSVS: Record<string, string> = {
@@ -310,6 +311,53 @@ function buildSourcesMd(
   return lines.filter(l => l !== undefined).join('\n')
 }
 
+// ── Layer 4: Claude Community Research Fallback ──────────────────────────────
+
+async function fetchClaudeCommunityResearch(
+  topic: string,
+  onLog: (line: string) => void
+): Promise<string> {
+  const apiKey = process.env.ANTHROPIC_API_KEY || ''
+  if (!apiKey || apiKey.startsWith('sk-ant-YOUR')) return ''
+
+  try {
+    onLog('No news data from Tavily — using Claude to generate community research context…')
+    const client = new Anthropic({ apiKey })
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: `You are a local real estate research assistant. Generate a detailed research brief for this blog post topic:
+
+TOPIC: ${topic}
+
+Provide specific, accurate information about:
+1. The city/community itself — population, character, location relative to Kalamazoo, major employers, school districts
+2. Real estate market — typical home price ranges (be specific with $ figures), market conditions, housing stock types
+3. Neighborhood highlights — specific street names, parks, landmarks, downtown areas, local businesses
+4. Schools — district name, notable schools, ratings if known
+5. Commute — drive times to Kalamazoo, major routes, traffic considerations
+6. What makes this community unique — something that would resonate with someone relocating from out of state
+7. Any recent developments, new construction, or growth trends
+
+Be specific and accurate. Use real place names. If you're not certain of a specific figure, give a reasonable range and note it's approximate. Do NOT fabricate statistics — if you don't know, say "approximately" or omit it.
+
+Format as a research brief with clear sections. This will be used by a blog writer to write an authentic local real estate guide.`
+      }],
+    })
+
+    const text = (message.content[0] as { type: string; text: string }).text
+    onLog(`✓ Claude community research: ${text.length} chars of context`)
+    return text
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    onLog(`Warning: Claude research fallback failed: ${msg}`)
+    return ''
+  }
+}
+
 // ── Main export ─────────────────────────────────────────────────────────────
 
 export async function runResearch(
@@ -335,12 +383,17 @@ export async function runResearch(
     const allStats = [...zillowStats, ...gkarStats]
     const allSources = [...newsSources, ...zillowSources, ...gkarSources]
 
-    if (allStats.length === 0 && news.length === 0) {
-      onLog('Warning: No data found. Check API keys and connectivity.')
+    // Layer 4: Claude community research fallback when no news data
+    let claudeResearch = ''
+    if (news.length === 0 && topic) {
+      claudeResearch = await fetchClaudeCommunityResearch(topic, onLog)
     }
 
     // Build sources.md
-    const sourcesMd = buildSourcesMd(area, topic, news, allStats, allSources)
+    let sourcesMd = buildSourcesMd(area, topic, news, allStats, allSources)
+    if (claudeResearch) {
+      sourcesMd += '\n\n## Community Research Brief\n' + claudeResearch
+    }
 
     // Build research.json
     const researchJson = JSON.stringify(
