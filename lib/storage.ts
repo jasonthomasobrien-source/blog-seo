@@ -24,12 +24,14 @@ export async function readFileBytes(path: string): Promise<Buffer | null> {
 }
 
 export async function writeFile(path: string, content: string): Promise<string> {
-  const { url } = await put(path, content, { access: 'private', addRandomSuffix: false })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { url } = await put(path, content, { access: 'private' as any, addRandomSuffix: false })
   return url
 }
 
 export async function writeFileBytes(path: string, buffer: Buffer, contentType: string): Promise<string> {
-  const { url } = await put(path, buffer, { access: 'private', addRandomSuffix: false, contentType })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { url } = await put(path, buffer, { access: 'private' as any, addRandomSuffix: false, contentType })
   return url
 }
 
