@@ -98,6 +98,9 @@ export default function Dashboard() {
   const [topicsError, setTopicsError] = useState<string>('')
   const [topicsLoaded, setTopicsLoaded] = useState(false)
   const [syncStatus, setSyncStatus] = useState<string>('')
+  const [showManualEntry, setShowManualEntry] = useState(false)
+  const [manualTitles, setManualTitles] = useState('')
+  const [manualStatus, setManualStatus] = useState('')
 
   // Topic & keyword inputs
   const [topicValue, setTopicValue] = useState('')
@@ -553,6 +556,31 @@ export default function Dashboard() {
     setTimeout(() => setSyncStatus(''), 8000)
   }
 
+  // ── Manual post entry ──────────────────────────────────────────────────────
+  async function addManualPosts() {
+    const titles = manualTitles.split('\n').map(t => t.trim()).filter(Boolean)
+    if (!titles.length) return
+    setManualStatus('Saving…')
+    try {
+      const r = await fetch('/api/add-posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ titles }),
+      })
+      const data = await r.json()
+      if (data.error) {
+        setManualStatus(`Error: ${data.error}`)
+      } else {
+        setManualStatus(`✓ Added ${data.added} posts (${data.skipped} already tracked)`)
+        setManualTitles('')
+        appendLog(`✓ Manually added ${data.added} posts to exclusion list`, 'ok')
+        setTimeout(() => { setShowManualEntry(false); setManualStatus('') }, 2000)
+      }
+    } catch (e: unknown) {
+      setManualStatus(`Error: ${e instanceof Error ? e.message : String(e)}`)
+    }
+  }
+
   // ── Mark Published ─────────────────────────────────────────────────────────
   async function markPublished() {
     try {
@@ -622,6 +650,13 @@ export default function Dashboard() {
               {syncStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{syncStatus}</span>}
               <button
                 className="btn btn-outline btn-sm"
+                onClick={() => { setShowManualEntry(v => !v); setManualStatus('') }}
+                title="Manually add existing post titles to the exclusion list"
+              >
+                + Add Existing
+              </button>
+              <button
+                className="btn btn-outline btn-sm"
                 onClick={syncPostsFromGhl}
                 disabled={running || topicsLoading}
                 title="Import all existing GHL posts into the exclusion list"
@@ -640,6 +675,24 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
+          {showManualEntry && (
+            <div style={{ padding: '12px 16px', borderBottom: '1px solid #2a3a4a', background: '#0d1f2d' }}>
+              <p style={{ fontSize: '12px', color: '#c8a96e', marginBottom: '8px', fontWeight: 600 }}>
+                Paste your existing post titles — one per line — to exclude them from suggestions:
+              </p>
+              <textarea
+                style={{ width: '100%', minHeight: '100px', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px', fontSize: '12px', fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
+                placeholder={'Moving to Portage Michigan: 10 Things to Know\nLiving in Mattawan Michigan: Pros and Cons\nKalamazoo real estate in March 2026 — what the numbers actually say'}
+                value={manualTitles}
+                onChange={e => setManualTitles(e.target.value)}
+              />
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
+                <button className="btn btn-gold btn-sm" onClick={addManualPosts} disabled={!manualTitles.trim()}>Save to Exclusion List</button>
+                <button className="btn btn-outline btn-sm" onClick={() => { setShowManualEntry(false); setManualStatus('') }}>Cancel</button>
+                {manualStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{manualStatus}</span>}
+              </div>
+            </div>
+          )}
           <div className="topics-body">
             {topicsLoaded && suggestedTopics.length > 0 ? (
               <div className="topics-grid" style={{ display: 'grid' }}>
