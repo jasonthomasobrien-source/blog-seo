@@ -108,10 +108,14 @@ export async function sendToGhl(
       body: JSON.stringify(payload),
     })
 
-    const data = await resp.json()
+    let data: Record<string, unknown> = {}
+    const rawBody = await resp.text()
+    try { data = JSON.parse(rawBody) } catch { /* not JSON */ }
 
     if (!resp.ok) {
-      const msg = data?.message || data?.error || `HTTP ${resp.status}`
+      const msg = data?.message || data?.error || rawBody.substring(0, 300) || `HTTP ${resp.status}`
+      onLog(`✗ GHL API error (HTTP ${resp.status}): ${msg}`)
+      onLog(`Raw response: ${rawBody.substring(0, 500)}`)
       return { success: false, error: `GHL API error: ${msg}` }
     }
 

@@ -60,6 +60,9 @@ export async function POST(
           return
         }
 
+        if (!result.success && result.error) {
+          send(`ERROR: ${result.error}`)
+        }
         controller.enqueue(
           new TextEncoder().encode(`data: __EXIT__${result.success ? 0 : 1}\n\n`)
         )
