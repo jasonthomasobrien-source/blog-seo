@@ -13,6 +13,14 @@ interface Topic {
   gap_analysis?: string
 }
 
+interface TopicDebug {
+  ghl_posts_found?: number
+  redis_keywords?: number
+  total_excluded?: number
+  covered_cities?: number
+  uncovered_cities?: number
+}
+
 interface SeoCheck {
   check: string
   pass: boolean
@@ -84,6 +92,7 @@ export default function Dashboard() {
 
   // Topic suggestions
   const [suggestedTopics, setSuggestedTopics] = useState<Topic[]>([])
+  const [topicsDebug, setTopicsDebug] = useState<TopicDebug | null>(null)
   const [selectedTopicIdx, setSelectedTopicIdx] = useState<number | null>(null)
   const [topicsLoading, setSuggestLoading] = useState(false)
   const [topicsError, setTopicsError] = useState<string>('')
@@ -468,6 +477,7 @@ export default function Dashboard() {
         setTopicsError(data.error)
       } else {
         setSuggestedTopics(data.topics || [])
+        setTopicsDebug(data.debug || null)
         setTopicsLoaded(true)
         setSelectedTopicIdx(null)
       }
@@ -576,6 +586,13 @@ export default function Dashboard() {
             <div>
               <h2>SEO Topic Ideas</h2>
               <p>AI-generated topics ranked by search opportunity — click one to select it</p>
+              {topicsDebug && (
+                <p style={{ fontSize: '11px', color: '#8492a6', marginTop: '2px' }}>
+                  Excluded {topicsDebug.total_excluded ?? 0} existing posts
+                  ({topicsDebug.ghl_posts_found ?? 0} from GHL · {topicsDebug.redis_keywords ?? 0} tracked keywords) ·
+                  {topicsDebug.uncovered_cities ?? 0} cities uncovered
+                </p>
+              )}
             </div>
             <button
               className="btn btn-gold btn-sm"
@@ -696,7 +713,7 @@ export default function Dashboard() {
               <div><h2>Write the Draft</h2><p>AI writes · you review · you edit</p></div>
             </div>
             <div className="card-body">
-              <p className="card-desc">Claude AI writes the full SEO blog post using the research and your topic — in your voice, following all the rules from CLAUDE.md. Review and edit before moving on.</p>
+              <p className="card-desc">Claude AI writes the full SEO blog post using the research and your topic — in your voice, following all the rules from CLAUDE.md. Voice and spell checks run automatically. Review and edit before moving on.</p>
               {apiKeyMissing && (
                 <div style={{ display: 'block', background: '#fff8e1', border: '1px solid #f9a825', borderRadius: '6px', padding: '10px 12px', fontSize: '12px', color: '#6d4c00', lineHeight: 1.5 }}>
                   <strong>ANTHROPIC_API_KEY not set.</strong> Add it to your environment variables.
@@ -800,32 +817,6 @@ export default function Dashboard() {
                   {running && runningBtn === 'Generate Image'
                     ? <><span className="spinner"></span> Running…</>
                     : 'Generate Image'}
-                </button>
-              </div>
-
-              <hr className="divider" />
-
-              {/* Quality checks */}
-              <div className="row">
-                <button
-                  className="btn btn-outline btn-sm"
-                  id="btn-voice"
-                  onClick={() => runPhase('voice_check', 'Voice Check')}
-                  disabled={running}
-                >
-                  {running && runningBtn === 'Voice Check'
-                    ? <><span className="spinner"></span> Running…</>
-                    : 'Voice Check'}
-                </button>
-                <button
-                  className="btn btn-outline btn-sm"
-                  id="btn-spell"
-                  onClick={() => runPhase('spellcheck', 'Spell Check')}
-                  disabled={running}
-                >
-                  {running && runningBtn === 'Spell Check'
-                    ? <><span className="spinner"></span> Running…</>
-                    : 'Spell Check'}
                 </button>
               </div>
 

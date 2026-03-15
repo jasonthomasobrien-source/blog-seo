@@ -21,39 +21,84 @@ const CONTENT_TYPES = [
   'buying a home in [city] michigan',
 ]
 
-async function fetchGhlPosts(): Promise<string[]> {
+interface GhlFetchResult {
+  titles: string[]
+  fetchedCount: number
+  attempted: number
+}
+
+async function fetchGhlPosts(): Promise<GhlFetchResult> {
   const apiKey = process.env.GHL_API_KEY || ''
   const locationId = process.env.GHL_LOCATION_ID || ''
   const blogId = process.env.GHL_BLOG_ID || ''
 
-  if (!apiKey || !locationId || !blogId) return []
+  if (!apiKey || !locationId || !blogId) return { titles: [], fetchedCount: 0, attempted: 0 }
 
   const titles: string[] = []
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    'Content-Type': 'application/json',
+    Version: '2021-07-28',
+  }
 
-  // Fetch both DRAFT and PUBLISHED posts to catch everything
-  for (const status of ['DRAFT', 'PUBLISHED']) {
+  // Extract titles from any response shape GHL might return
+  function extractTitles(data: unknown): string[] {
+    if (!data || typeof data !== 'object') return []
+    const d = data as Record<string, unknown>
+    const list = (
+      Array.isArray(d.posts) ? d.posts :
+      Array.isArray(d.data) ? d.data :
+      Array.isArray(d.items) ? d.items :
+      Array.isArray(d.blogPosts) ? d.blogPosts :
+      Array.isArray(data) ? data as unknown[] : []
+    ) as Array<Record<string, unknown>>
+    return list.map(p => String(p.title || p.name || '')).filter(Boolean)
+  }
+
+  // Try all meaningful URL patterns — no filter, then each status
+  const urlPatterns = [
+    // No status filter — should return everything
+    `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100`,
+    // Status-filtered attempts
+    `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=PUBLISHED`,
+    `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=DRAFT`,
+    `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=ACTIVE`,
+  ]
+
+  let attempted = 0
+  for (const url of urlPatterns) {
     try {
-      const resp = await fetch(
-        `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=${status}`,
-        {
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-            Version: '2021-07-28',
-          },
-        }
-      )
+      attempted++
+      const resp = await fetch(url, { headers })
       if (!resp.ok) continue
-      const data = await resp.json() as { posts?: Array<{ title?: string }> }
-      for (const p of data.posts || []) {
-        if (p.title && !titles.includes(p.title)) titles.push(p.title)
+      const data = await resp.json()
+      const found = extractTitles(data)
+      for (const t of found) {
+        if (!titles.includes(t)) titles.push(t)
+      }
+
+      // Paginate if the response indicates more pages
+      const d = data as Record<string, unknown>
+      const total = Number(d.total ?? d.count ?? 0)
+      if (total > 100 && titles.length < total) {
+        // Fetch additional pages
+        for (let offset = 100; offset < Math.min(total, 500); offset += 100) {
+          try {
+            const pageResp = await fetch(`${url}&offset=${offset}`, { headers })
+            if (!pageResp.ok) break
+            const pageData = await pageResp.json()
+            for (const t of extractTitles(pageData)) {
+              if (!titles.includes(t)) titles.push(t)
+            }
+          } catch { break }
+        }
       }
     } catch {
-      // ignore — continue with other status
+      // continue to next pattern
     }
   }
 
-  return titles
+  return { titles, fetchedCount: titles.length, attempted }
 }
 
 const SYSTEM_PROMPT = `You are an SEO content strategist for Jason O'Brien, a REALTOR® at PREMIERE Group at Real Broker, LLC, serving the Kalamazoo/West Michigan area. Jason's website is jobrienhomes.com.
@@ -88,7 +133,7 @@ OUTPUT RULES:
 
 export async function suggestTopics(
   count: number
-): Promise<{ success: boolean; topics?: Array<Record<string, string>>; error?: string }> {
+): Promise<{ success: boolean; topics?: Array<Record<string, string>>; debug?: Record<string, unknown>; error?: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY || ''
   if (!apiKey || apiKey.startsWith('sk-ant-YOUR')) {
     return { success: false, error: 'ANTHROPIC_API_KEY not set' }
@@ -99,61 +144,73 @@ export async function suggestTopics(
     const publishedEntries = await getPublishedKeywords()
     const publishedKeywords = publishedEntries.map(e => e.keyword)
 
-    // Fetch actual GHL posts for a real gap picture
-    const ghlTitles = await fetchGhlPosts()
+    // Fetch actual GHL posts — robust multi-pattern fetch
+    const ghlResult = await fetchGhlPosts()
+    const ghlTitles = ghlResult.titles
 
     const client = new Anthropic({ apiKey })
 
     const now = new Date()
     const monthYear = now.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
-    // Build the full city×content matrix for gap context
     const allCities = [...ALL_CITIES.tier1, ...ALL_CITIES.tier2, ...ALL_CITIES.tier3]
-    const coveredBlock = [
-      ...(ghlTitles.length > 0
-        ? [`\nEXISTING GHL BLOG POSTS (${ghlTitles.length} total — do NOT suggest semantically equivalent topics):\n` +
-           ghlTitles.map(t => `- ${t}`).join('\n')]
-        : []),
-      ...(publishedKeywords.length > 0
-        ? ['\nADDITIONAL TRACKED KEYWORDS (do not repeat):\n' +
-           publishedKeywords.map(kw => `- ${kw}`).join('\n')]
-        : []),
-    ].join('\n')
 
-    // Extract which cities already have community guides — city-level deduplication
-    const allTitlesAndKeywords = [
+    // All known titles + keywords for exclusion — deduplicated across sources
+    const allTitlesAndKeywords = Array.from(new Set([
       ...ghlTitles,
       ...publishedKeywords,
-      ...publishedEntries.map(e => e.title || ''),
+      ...publishedEntries.map(e => e.title || '').filter(Boolean),
+    ]))
+
+    // Build the covered-city map — city-level dedup for community guides
+    const communityGuideKeywords = [
+      'moving', 'living', 'cost of living', 'neighborhood', 'community guide',
+      'things to know', 'schools', 'pros and cons', 'guide to', 'life in',
     ]
 
     const coveredCityGuides: string[] = []
     for (const city of allCities) {
-      const cityLower = city.toLowerCase().replace(' mi', '').trim()
-      const hasGuide = allTitlesAndKeywords.some(t =>
-        t.toLowerCase().includes(cityLower) &&
-        (t.toLowerCase().includes('moving') || t.toLowerCase().includes('living') ||
-         t.toLowerCase().includes('cost of living') || t.toLowerCase().includes('neighborhood') ||
-         t.toLowerCase().includes('community guide') || t.toLowerCase().includes('things to know'))
-      )
+      const cityLower = city.toLowerCase().replace(/ mi$/i, '').trim()
+      const hasGuide = allTitlesAndKeywords.some(t => {
+        const tl = t.toLowerCase()
+        return tl.includes(cityLower) && communityGuideKeywords.some(kw => tl.includes(kw))
+      })
       if (hasGuide) coveredCityGuides.push(city)
     }
 
     const uncoveredCities = allCities.filter(c => !coveredCityGuides.includes(c))
 
+    // Build per-city content-type coverage matrix
+    // For each covered city, figure out which CONTENT_TYPES are already present
+    const cityContentCoverage: Record<string, string[]> = {}
+    for (const city of coveredCityGuides) {
+      const cityLower = city.toLowerCase().replace(/ mi$/i, '').trim()
+      cityContentCoverage[city] = CONTENT_TYPES.filter(ct => {
+        const ctKw = ct.replace('[city]', cityLower)
+        return allTitlesAndKeywords.some(t => t.toLowerCase().includes(ctKw.split(' ').filter(w => w.length > 3)[0] || ''))
+      })
+    }
+
+    const coveredBlock = allTitlesAndKeywords.length > 0
+      ? `\nEXISTING POSTS & KEYWORDS — HARD EXCLUSION LIST (${allTitlesAndKeywords.length} total):\n` +
+        allTitlesAndKeywords.map(t => `- ${t}`).join('\n')
+      : '\n(No existing posts found — all topics are available)'
+
     const hardExclusion = coveredCityGuides.length > 0
-      ? `\nHARD RULE — DO NOT suggest a community guide for ANY of these cities (already covered):\n${coveredCityGuides.map(c => `- ${c}`).join('\n')}`
+      ? `\nHARD RULE — NEVER suggest a community guide for these cities (already covered):\n${coveredCityGuides.map(c => `- ${c}`).join('\n')}`
       : ''
 
     const gapContext = `
-CITIES WITH ZERO COMMUNITY GUIDE COVERAGE (highest priority — suggest these first):
-${uncoveredCities.slice(0, 20).map(c => `- ${c}`).join('\n') || '(all Tier 1/2 cities are covered)'}
+UNCOVERED CITIES — zero community guide coverage (suggest these first, highest priority):
+${uncoveredCities.slice(0, 20).map(c => `- ${c}`).join('\n') || '(all Tier 1/2 cities are covered — focus on Tier 3 or content-type gaps)'}
 ${hardExclusion}
 
-CONTENT TYPE GAPS TO IDENTIFY:
+CONTENT TYPE GAPS TO FILL within covered cities (only if a city has NO post of that type):
 ${CONTENT_TYPES.map(t => `- ${t}`).join('\n')}`
 
-    const userPrompt = `Today is ${monthYear}. Perform a gap analysis and suggest the ${count} highest-priority SEO blog topics for Jason O'Brien's West Michigan real estate blog.
+    const userPrompt = `Today is ${monthYear}. Perform a rigorous gap analysis and suggest the ${count} highest-priority SEO blog topics for Jason O'Brien's West Michigan real estate blog.
+
+CRITICAL: Do NOT suggest any topic that is the same city + same content type as an existing post, even if the wording differs. For example, if "Moving to Portage Michigan" exists, do not suggest "Living in Portage" if that's also covered.
 ${coveredBlock}
 ${gapContext}
 
@@ -173,7 +230,7 @@ Return ONLY valid JSON — no markdown, no explanation. Format:
   ]
 }
 
-Make exactly ${count} topics. Sort from highest-priority gap to lowest. Fill uncovered cities before adding more content types to already-covered cities.`
+Make exactly ${count} topics. Sort from highest-priority gap to lowest. Fill uncovered cities before adding content-type variants to already-covered cities.`
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
@@ -195,7 +252,17 @@ Make exactly ${count} topics. Sort from highest-priority gap to lowest. Fill unc
     const data = JSON.parse(raw)
     const topics = data.topics || []
 
-    return { success: true, topics }
+    return {
+      success: true,
+      topics,
+      debug: {
+        ghl_posts_found: ghlResult.fetchedCount,
+        redis_keywords: publishedKeywords.length,
+        total_excluded: allTitlesAndKeywords.length,
+        covered_cities: coveredCityGuides.length,
+        uncovered_cities: uncoveredCities.length,
+      },
+    }
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : String(e)
     return { success: false, error: msg }

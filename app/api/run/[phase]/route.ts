@@ -2,13 +2,13 @@ export const maxDuration = 300
 
 import { NextRequest } from 'next/server'
 import { runResearch } from '@/lib/tools/research'
-import { generateDraft } from '@/lib/tools/generate-draft'
+import { generateDraft, autoFixDraft } from '@/lib/tools/generate-draft'
 import { generateImage } from '@/lib/tools/generate-image'
 import { runSeoCheck } from '@/lib/tools/seo-check'
 import { runSpellcheck } from '@/lib/tools/spellcheck'
-import { runVoiceCheck } from '@/lib/tools/voice-check'
+import { runVoiceCheck, runVoiceChecks } from '@/lib/tools/voice-check'
 import { sendToGhl } from '@/lib/tools/send-ghl'
-import { getConfig } from '@/lib/storage'
+import { getConfig, readFile } from '@/lib/storage'
 
 export async function POST(
   request: NextRequest,
@@ -36,6 +36,36 @@ export async function POST(
 
         } else if (phase === 'write_draft') {
           result = await generateDraft(send)
+
+          if (result.success) {
+            // ── Auto voice check + fix ────────────────────────────
+            send('▶ Running voice check…')
+            const draftText = await readFile('draft.md')
+            const flags = runVoiceChecks(draftText)
+            if (flags.length === 0) {
+              send('✓ Voice check passed.')
+            } else {
+              send(`⚠ Voice check: ${flags.length} issue(s) found — auto-fixing…`)
+              const descriptions = flags.map(f =>
+                f.phrase
+                  ? `Banned phrase "${f.phrase}" found: ${f.context || ''}`
+                  : f.message || f.type
+              )
+              await autoFixDraft(descriptions, send)
+              // Re-check after fix
+              const fixedText = await readFile('draft.md')
+              const remaining = runVoiceChecks(fixedText)
+              if (remaining.length === 0) {
+                send('✓ Voice check passed after auto-fix.')
+              } else {
+                send(`⚠ ${remaining.length} voice issue(s) remain — review the draft manually if needed.`)
+              }
+            }
+
+            // ── Auto spell check ──────────────────────────────────
+            send('▶ Running spell check…')
+            await runSpellcheck(send)
+          }
 
         } else if (phase === 'image') {
           result = await generateImage(send)

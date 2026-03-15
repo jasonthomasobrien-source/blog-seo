@@ -169,3 +169,54 @@ Write the complete blog post now. Return ONLY the markdown content starting with
     return { success: false, error: msg }
   }
 }
+
+// ── Auto-fix voice issues ────────────────────────────────────────────────────
+
+export async function autoFixDraft(
+  flagDescriptions: string[],
+  onLog: (line: string) => void
+): Promise<void> {
+  const apiKey = process.env.ANTHROPIC_API_KEY || ''
+  if (!apiKey || apiKey.startsWith('sk-ant-YOUR')) return
+
+  try {
+    const currentDraft = await readFile('draft.md')
+    if (!currentDraft) return
+
+    onLog('▶ Auto-fixing voice issues…')
+
+    const client = new Anthropic({ apiKey })
+
+    const fixPrompt = `You are editing a real estate blog post draft. The following voice/tone issues were detected. Fix ONLY the flagged sentences — do not change anything else, do not rewrite sections, do not add content.
+
+ISSUES TO FIX:
+${flagDescriptions.map((f, i) => `${i + 1}. ${f}`).join('\n')}
+
+RULES:
+- Replace banned phrases with natural, human alternatives
+- Keep the same meaning and sentence structure where possible
+- Do not add new content or change any unflagged sentences
+- Preserve all front matter, headings, links, and formatting exactly
+- Return the COMPLETE draft with ONLY the flagged sentences changed
+
+DRAFT:
+${currentDraft}
+
+Return ONLY the fixed markdown — no explanation, no preamble.`
+
+    const message = await client.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 4096,
+      messages: [{ role: 'user', content: fixPrompt }],
+    })
+
+    const fixed = (message.content[0] as { type: string; text: string }).text.trim()
+    if (fixed && fixed.length > 100) {
+      await writeFile('draft.md', fixed)
+      onLog('✓ Voice issues auto-fixed and draft saved.')
+    }
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e)
+    onLog(`Warning: Auto-fix pass failed: ${msg}`)
+  }
+}

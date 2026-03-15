@@ -139,6 +139,18 @@ function checkEmojiInBody(text: string): VoiceFlag[] {
   return []
 }
 
+// Pure check — takes text, returns flags. No storage or logging.
+export function runVoiceChecks(text: string): VoiceFlag[] {
+  return [
+    ...checkBannedPhrases(text),
+    ...checkContextSensitive(text),
+    ...checkExclamationPoints(text),
+    ...checkConsecutiveISentences(text),
+    ...checkGreetingOpener(text),
+    ...checkEmojiInBody(text),
+  ]
+}
+
 export async function runVoiceCheck(
   onLog: (line: string) => void
 ): Promise<{ success: boolean; error?: string }> {
