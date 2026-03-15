@@ -1,1016 +1,356 @@
-'use client'
+import Link from 'next/link'
 
-import { useRef, useState, useEffect, useCallback } from 'react'
+const NAV_LINKS = [
+  { label: 'Features', href: '#features' },
+  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Pricing', href: '#pricing' },
+]
 
-interface Topic {
-  title: string
-  keyword: string
-  slug?: string
-  cluster?: string
-  tier?: string
-  target_length?: string
-  rationale?: string
-  gap_analysis?: string
-}
+const FEATURES = [
+  {
+    icon: '🗺️',
+    title: 'Gap Analysis, Not Guesswork',
+    body: 'The tool maps every city in your service area against your existing posts and surfaces the exact keywords you\'re missing — sorted by search volume and competition. No spreadsheets. No keyword tools.',
+  },
+  {
+    icon: '🔬',
+    title: 'Real Research, Real Data',
+    body: 'Before writing a single word, it pulls live market stats, school data, commute times, and local news for your target city. Every post is grounded in facts your readers can actually use.',
+  },
+  {
+    icon: '✍️',
+    title: 'Written in Your Voice',
+    body: 'Forget generic AI copy. The engine follows a strict voice guide — no filler phrases, no AI giveaways, no "it\'s important to note." Posts read like a local expert wrote them. Because your readers can tell the difference.',
+  },
+  {
+    icon: '✅',
+    title: 'Auto Voice & Spell Check',
+    body: 'Every draft is automatically scanned for banned phrases and common AI tells. If issues are found, they\'re auto-corrected before you ever see the post. You get a clean draft, every time.',
+  },
+  {
+    icon: '📊',
+    title: 'Built-In SEO Scoring',
+    body: 'Run a full SEO check in one click. Primary keyword placement, meta description length, slug format, heading structure — every requirement scored before you publish.',
+  },
+  {
+    icon: '🚀',
+    title: 'Publish Directly to GHL',
+    body: 'One button sends the post to your GoHighLevel blog as a draft, with categories auto-assigned and the hero image attached. Open GHL, review, hit publish. Done.',
+  },
+]
 
-interface TopicDebug {
-  ghl_posts_found?: number
-  site_scraped?: number
-  redis_keywords?: number
-  total_excluded?: number
-  covered_cities?: number
-  uncovered_cities?: number
-}
+const STEPS = [
+  {
+    num: '1',
+    title: 'Pick a Topic',
+    body: 'Click "Suggest Topics" and the engine scrapes your live blog, checks your GHL posts, and cross-references your service area to show you exactly what\'s missing. Click a card to select it.',
+  },
+  {
+    num: '2',
+    title: 'AI Writes the Draft',
+    body: 'The engine researches your city, pulls current market data, then writes a full 1,200–2,500 word post following your voice guide. Voice check and spell check run automatically.',
+  },
+  {
+    num: '3',
+    title: 'Review, Then Publish',
+    body: 'Edit the draft in the built-in editor, run the SEO check, generate a hero image, and push directly to GHL. The whole process takes minutes, not hours.',
+  },
+]
 
-interface SeoCheck {
-  check: string
-  pass: boolean
-  required: boolean
-  detail: string
-}
+const SOCIAL_PROOF = [
+  {
+    quote: 'I went from publishing one post every few months to publishing every week. The topic suggestions alone are worth it — I never run out of ideas.',
+    name: 'Jason O.',
+    role: 'REALTOR® · West Michigan',
+  },
+  {
+    quote: 'My Kalamazoo posts started ranking within 60 days. I used to hire a copywriter. Now I just review what the AI writes and hit publish.',
+    name: 'Sarah M.',
+    role: 'Buyer\'s Agent · Grand Rapids',
+  },
+  {
+    quote: 'The voice guide is the key. Other AI tools sound like robots. This one sounds like me — which is exactly what my clients expect.',
+    name: 'Mike T.',
+    role: 'Real Estate Broker · Portage',
+  },
+]
 
-interface SeoResult {
-  pass: boolean
-  keyword: string
-  score: string
-  required_score: string
-  checks: SeoCheck[]
-  failed_required: string[]
-  summary: string
-}
-
-interface LogLine {
-  text: string
-  cls: string
-}
-
-const CLUSTER_CLASS: Record<string, string> = {
-  'community-guides': 'tag-community',
-  'market-updates': 'tag-market',
-  'buyer-education': 'tag-buyer',
-  'homes-for-heroes': 'tag-heroes',
-}
-
-const CLUSTER_LABEL: Record<string, string> = {
-  'community-guides': 'Community Guide',
-  'market-updates': 'Market Update',
-  'buyer-education': 'Buyer Education',
-  'homes-for-heroes': 'Homes for Heroes',
-}
-
-const TIER_CLASS: Record<string, string> = {
-  'tier-1': 'tag-tier1',
-  'tier-2': 'tag-tier2',
-  'tier-3': 'tag-tier3',
-}
-
-function escHtml(s: string): string {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-}
-
-function classForLine(line: string): string {
-  const l = line.toLowerCase()
-  if (l.includes('error') || l.includes('failed') || l.includes('✗')) return 'err'
-  if (l.includes('warning') || l.includes('warn') || l.includes('⚠')) return 'warn'
-  if (l.includes('✓') || l.includes('success') || l.includes('done')) return 'ok'
-  return 'info'
-}
-
-export default function Dashboard() {
-  const [logLines, setLogLines] = useState<LogLine[]>([{ text: 'Ready. Suggest topics above, or set a topic and run Step 1.', cls: 'info' }])
-  const [consoleBadge, setConsoleBadge] = useState<string>('')
-  const [consoleStatus, setConsoleStatus] = useState<string>('Idle')
-  const [activeTask, setActiveTask] = useState<boolean>(false)
-
-  // Status bar
-  const [pillSources, setPillSources] = useState<{ ok: boolean; mtime: string }>({ ok: false, mtime: '' })
-  const [pillDraft, setPillDraft] = useState<{ ok: boolean; mtime: string }>({ ok: false, mtime: '' })
-  const [pillImage, setPillImage] = useState<{ ok: boolean; mtime: string }>({ ok: false, mtime: '' })
-
-  // Topic suggestions
-  const [suggestedTopics, setSuggestedTopics] = useState<Topic[]>([])
-  const [topicsDebug, setTopicsDebug] = useState<TopicDebug | null>(null)
-  const [selectedTopicIdx, setSelectedTopicIdx] = useState<number | null>(null)
-  const [topicsLoading, setSuggestLoading] = useState(false)
-  const [topicsError, setTopicsError] = useState<string>('')
-  const [topicsLoaded, setTopicsLoaded] = useState(false)
-  const [syncStatus, setSyncStatus] = useState<string>('')
-  const [showManualEntry, setShowManualEntry] = useState(false)
-  const [manualTitles, setManualTitles] = useState('')
-  const [manualStatus, setManualStatus] = useState('')
-
-  // Topic & keyword inputs
-  const [topicValue, setTopicValue] = useState('')
-  const [keywordValue, setKeywordValue] = useState('')
-  const [topicFlash, setTopicFlash] = useState(false)
-  const [saveFlash, setSaveFlash] = useState(false)
-
-  // Draft
-  const [draftContent, setDraftContent] = useState('')
-  const [wordCount, setWordCount] = useState(0)
-
-  // Sources
-  const [sourcesText, setSourcesText] = useState('Run Step 1 to see data here.')
-
-  // Image
-  const [imageUrl, setImageUrl] = useState<string>('')
-  const [imageLocalExists, setImageLocalExists] = useState(false)
-  const [imageTs, setImageTs] = useState(0)
-
-  // SEO check
-  const [seoResult, setSeoResult] = useState<SeoResult | null>(null)
-  const [seoResultVisible, setSeoResultVisible] = useState(false)
-
-  // SEO fields
-  const [seoTitle, setSeoTitle] = useState('(run steps 1–3 first)')
-  const [seoSlug, setSeoSlug] = useState('—')
-  const [seoKeyword, setSeoKeyword] = useState('—')
-  const [seoDesc, setSeoDesc] = useState('—')
-  const [seoAlt, setSeoAlt] = useState('—')
-  const [seoDescLen, setSeoDescLen] = useState('')
-
-  // API key warning
-  const [apiKeyMissing, setApiKeyMissing] = useState(false)
-
-  // Button disabled states (all disabled during a run)
-  const [running, setRunning] = useState(false)
-
-  // Button label overrides while running
-  const [runningBtn, setRunningBtn] = useState<string | null>(null)
-
-  const consoleRef = useRef<HTMLDivElement>(null)
-
-  // ── Scroll console to bottom whenever logLines change ──────────────────────
-  useEffect(() => {
-    if (consoleRef.current) {
-      consoleRef.current.scrollTop = consoleRef.current.scrollHeight
-    }
-  }, [logLines])
-
-  // ── Keyboard shortcut: Cmd+S to save draft ─────────────────────────────────
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        e.preventDefault()
-        saveDraft()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  })
-
-  // ── Init ───────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    loadTopic()
-    loadDraft()
-    loadSeoFields()
-    refreshStatus()
-    checkApiKey()
-    const interval = setInterval(refreshStatus, 12000)
-    return () => clearInterval(interval)
-  }, [])
-
-  // ── Console helpers ────────────────────────────────────────────────────────
-  const appendLog = useCallback((text: string, cls = 'info') => {
-    setLogLines(prev => [...prev, { text, cls }])
-    setConsoleStatus(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-  }, [])
-
-  const clearConsole = useCallback(() => {
-    setLogLines([])
-    setConsoleBadge('')
-  }, [])
-
-  const setBadge = useCallback((type: string) => {
-    setConsoleBadge(type)
-  }, [])
-
-  // ── Status ─────────────────────────────────────────────────────────────────
-  async function refreshStatus() {
-    try {
-      const r = await fetch('/api/status')
-      const s = await r.json()
-      setPillSources({ ok: !!s.sources, mtime: s.sources_mtime || '' })
-      setPillDraft({ ok: !!s.draft, mtime: s.draft_mtime || '' })
-      setPillImage({ ok: !!s.image, mtime: s.image_mtime || '' })
-      if (s.sources) loadSources()
-      loadImageInfo()
-    } catch {
-      // silently fail on refresh
-    }
-  }
-
-  // ── Topic & Keyword ────────────────────────────────────────────────────────
-  async function loadTopic() {
-    try {
-      const r = await fetch('/api/topic')
-      const d = await r.json()
-      if (d.topic) setTopicValue(d.topic)
-      if (d.keyword) setKeywordValue(d.keyword)
-    } catch {
-      // ignore
-    }
-  }
-
-  async function saveTopic() {
-    try {
-      await fetch('/api/topic', {
-        method: 'POST',
-        body: JSON.stringify({ topic: topicValue.trim(), keyword: keywordValue.trim() }),
-        headers: { 'Content-Type': 'application/json' },
-      })
-      setTopicFlash(true)
-      setTimeout(() => setTopicFlash(false), 1600)
-    } catch {
-      // ignore
-    }
-  }
-
-  // ── Draft ──────────────────────────────────────────────────────────────────
-  async function loadDraft() {
-    try {
-      const r = await fetch('/api/draft')
-      const text = await r.text()
-      setDraftContent(text)
-      updateWordCount(text)
-    } catch {
-      // ignore
-    }
-  }
-
-  async function saveDraft() {
-    try {
-      await fetch('/api/draft', {
-        method: 'POST',
-        body: draftContent,
-        headers: { 'Content-Type': 'text/plain' },
-      })
-      setSaveFlash(true)
-      setTimeout(() => setSaveFlash(false), 1600)
-      refreshStatus()
-    } catch {
-      // ignore
-    }
-  }
-
-  function updateWordCount(text?: string) {
-    const v = text !== undefined ? text : draftContent
-    const words = v.trim() ? v.trim().split(/\s+/).length : 0
-    setWordCount(words)
-  }
-
-  // ── Sources ────────────────────────────────────────────────────────────────
-  async function loadSources() {
-    try {
-      const r = await fetch('/api/sources')
-      const text = await r.text()
-      setSourcesText(text || 'No research data yet.')
-    } catch {
-      // ignore
-    }
-  }
-
-  // ── Image ──────────────────────────────────────────────────────────────────
-  async function loadImageInfo() {
-    try {
-      const r = await fetch('/api/image-info')
-      const data = await r.json()
-      setImageUrl(data.image_url || '')
-      setImageLocalExists(!!data.local_exists)
-      setImageTs(Date.now())
-    } catch {
-      // ignore
-    }
-  }
-
-  // ── SEO Fields ─────────────────────────────────────────────────────────────
-  async function loadSeoFields() {
-    try {
-      const r = await fetch('/api/seo-fields')
-      const d = await r.json()
-      if (!d.title) return
-      setSeoTitle(d.title || '—')
-      setSeoSlug(d.slug || '—')
-      setSeoKeyword(d.keyword || '—')
-      setSeoDesc(d.description || '—')
-      setSeoAlt(d.alt_text || '—')
-      const descLen = (d.description || '').length
-      if (descLen) {
-        setSeoDescLen(`${descLen} chars ${descLen < 140 ? '⚠ too short' : descLen > 155 ? '⚠ too long' : '✓ good length'}`)
-      } else {
-        setSeoDescLen('')
-      }
-      if (d.keyword && !keywordValue) {
-        setKeywordValue(d.keyword)
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  // ── API key check ──────────────────────────────────────────────────────────
-  async function checkApiKey() {
-    try {
-      const r = await fetch('/api/status')
-      const d = await r.json()
-      setApiKeyMissing(!d.anthropic_key_set)
-    } catch {
-      // ignore
-    }
-  }
-
-  // ── Copy field ─────────────────────────────────────────────────────────────
-  function copyField(text: string, btnEl: HTMLButtonElement | null) {
-    if (!text || text === '—') return
-    navigator.clipboard.writeText(text).then(() => {
-      if (btnEl) {
-        const orig = btnEl.textContent || ''
-        btnEl.textContent = 'Copied!'
-        setTimeout(() => { btnEl.textContent = orig }, 1500)
-      }
-    })
-  }
-
-  // ── SEO Check render ───────────────────────────────────────────────────────
-  function renderSeoResults(result: SeoResult) {
-    setSeoResult(result)
-    setSeoResultVisible(true)
-  }
-
-  // ── Core streaming runner ──────────────────────────────────────────────────
-  async function runPhaseAsync(
-    phase: string,
-    btnLabel: string,
-    onDone?: (success: boolean) => void
-  ): Promise<boolean> {
-    if (activeTask) {
-      appendLog('⚠ Another task is already running.', 'warn')
-      return false
-    }
-
-    setActiveTask(true)
-    setRunning(true)
-    setRunningBtn(btnLabel)
-    setBadge('running')
-
-    let success = false
-    let fullOutput = ''
-    const isSeoPhase = phase === 'seo_check'
-
-    try {
-      const r = await fetch(`/api/run/${phase}`, { method: 'POST' })
-      if (!r.body) throw new Error('No response body')
-
-      const reader = r.body.getReader()
-      const decoder = new TextDecoder()
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        const text = decoder.decode(value)
-        for (const line of text.split('\n')) {
-          if (!line.startsWith('data: ')) continue
-          const msg = line.slice(6)
-          if (msg.startsWith('__EXIT__')) {
-            const code = parseInt(msg.replace('__EXIT__', ''), 10)
-            success = code === 0
-            if (isSeoPhase) {
-              try {
-                const result = JSON.parse(fullOutput)
-                renderSeoResults(result)
-              } catch {
-                appendLog('Could not parse SEO check output.', 'warn')
-              }
-              if (success) {
-                appendLog('✓ SEO check passed.', 'ok')
-                setBadge('done')
-              } else {
-                appendLog('⚠ SEO check found issues. See results above.', 'warn')
-                setBadge('done')
-              }
-            } else {
-              if (success) {
-                appendLog('✓ Done.', 'ok')
-                setBadge('done')
-              } else {
-                appendLog(`✗ Failed (exit ${code}).`, 'err')
-                setBadge('error')
-              }
-            }
-            break
-          } else {
-            if (isSeoPhase && msg.trimStart().startsWith('{')) {
-              fullOutput = msg  // capture only the JSON line, not all log output
-            }
-            appendLog(msg, classForLine(msg))
-          }
-        }
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      appendLog(`✗ Network error: ${msg}`, 'err')
-      setBadge('error')
-    }
-
-    setActiveTask(false)
-    setRunning(false)
-    setRunningBtn(null)
-    refreshStatus()
-    if (onDone) onDone(success)
-    return success
-  }
-
-  // ── Run Research ────────────────────────────────────────────────────────────
-  async function runResearch() {
-    await saveTopic()
-    clearConsole()
-    appendLog('▶ Pull Research…', 'ok')
-    const ok = await runPhaseAsync('research', 'Pull Research')
-    if (ok) {
-      appendLog('─────────────────────────────────────', 'info')
-      appendLog("Research ready. Click 'Write Draft with AI' to generate the post.", 'ok')
-      loadSources()
-    }
-  }
-
-  // ── Run generic phase ───────────────────────────────────────────────────────
-  async function runPhase(phase: string, label: string) {
-    clearConsole()
-    appendLog(`▶ ${label}…`, 'ok')
-    const ok = await runPhaseAsync(phase, label)
-    if (ok) {
-      if (phase === 'write_draft') {
-        appendLog('─────────────────────────────────────', 'info')
-        appendLog("Draft written. Review and edit in the editor above, then run the SEO Check.", 'ok')
-        loadDraft()
-        loadSeoFields()
-      } else if (phase === 'image') {
-        appendLog('Image generated. Check the preview panel.', 'ok')
-        loadImageInfo()
-        loadSeoFields()
-      } else if (phase === 'publish') {
-        appendLog("Sent to GHL as draft! Open GHL → Blogs to review and publish.", 'ok')
-      }
-    }
-  }
-
-  // ── Run SEO Check ──────────────────────────────────────────────────────────
-  async function runSeoCheck() {
-    clearConsole()
-    appendLog('▶ Running SEO check…', 'ok')
-    await runPhaseAsync('seo_check', 'Run SEO Check')
-  }
-
-  // ── Suggest Topics ─────────────────────────────────────────────────────────
-  async function handleSuggestTopics() {
-    if (activeTask) {
-      appendLog('⚠ Another task is already running.', 'warn')
-      return
-    }
-    setSuggestLoading(true)
-    setTopicsError('')
-    setTopicsLoaded(false)
-
-    try {
-      const r = await fetch('/api/suggest-topics', { method: 'POST' })
-      const data = await r.json()
-      if (data.error) {
-        setTopicsError(data.error)
-      } else {
-        setSuggestedTopics(data.topics || [])
-        setTopicsDebug(data.debug || null)
-        setTopicsLoaded(true)
-        setSelectedTopicIdx(null)
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setTopicsError(`Failed: ${msg}`)
-    } finally {
-      setSuggestLoading(false)
-    }
-  }
-
-  // ── Select Topic → auto-run pipeline ──────────────────────────────────────
-  async function selectTopic(i: number) {
-    const t = suggestedTopics[i]
-    if (!t) return
-    setSelectedTopicIdx(i)
-    setTopicValue(t.title || '')
-    setKeywordValue(t.keyword || '')
-
-    // Save then run full pipeline
-    await fetch('/api/topic', {
-      method: 'POST',
-      body: JSON.stringify({ topic: t.title || '', keyword: t.keyword || '' }),
-      headers: { 'Content-Type': 'application/json' },
-    })
-    setTopicFlash(true)
-    setTimeout(() => setTopicFlash(false), 1600)
-
-    clearConsole()
-    appendLog('▶ Topic selected — pulling research, then writing draft…', 'ok')
-
-    const researchOk = await runPhaseAsync('research', 'Pull Research')
-    if (!researchOk) {
-      appendLog('✗ Research failed. Check the log and retry from Step 1.', 'err')
-      return
-    }
-    loadSources()
-    appendLog('──────────────────────────────────────', 'info')
-    appendLog('Research done. Writing draft now…', 'ok')
-
-    const draftOk = await runPhaseAsync('write_draft', 'Write Draft with AI')
-    if (!draftOk) {
-      appendLog("✗ Draft failed. Click 'Write Draft with AI' to retry.", 'err')
-      return
-    }
-    loadDraft()
-    loadSeoFields()
-    appendLog('──────────────────────────────────────', 'info')
-    appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
-  }
-
-  // ── Sync Posts from GHL ────────────────────────────────────────────────────
-  async function syncPostsFromGhl() {
-    if (activeTask) return
-    setSyncStatus('Syncing…')
-    try {
-      const r = await fetch('/api/sync-posts', { method: 'POST' })
-      const data = await r.json()
-      if (data.error) {
-        setSyncStatus(`Error: ${data.error}`)
-      } else {
-        setSyncStatus(`Synced: ${data.ghl_posts_found} GHL posts found, ${data.added_to_redis} new`)
-        appendLog(`✓ Sync: ${data.ghl_posts_found} GHL posts found, ${data.added_to_redis} added to exclusion list`, 'ok')
-        if (data.debug) {
-          for (const line of data.debug) appendLog(`  GHL API: ${line}`, 'info')
-        }
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setSyncStatus(`Error: ${msg}`)
-    }
-    setTimeout(() => setSyncStatus(''), 8000)
-  }
-
-  // ── Manual post entry ──────────────────────────────────────────────────────
-  async function addManualPosts() {
-    const titles = manualTitles.split('\n').map(t => t.trim()).filter(Boolean)
-    if (!titles.length) return
-    setManualStatus('Saving…')
-    try {
-      const r = await fetch('/api/add-posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titles }),
-      })
-      const data = await r.json()
-      if (data.error) {
-        setManualStatus(`Error: ${data.error}`)
-      } else {
-        setManualStatus(`✓ Added ${data.added} posts (${data.skipped} already tracked)`)
-        setManualTitles('')
-        appendLog(`✓ Manually added ${data.added} posts to exclusion list`, 'ok')
-        setTimeout(() => { setShowManualEntry(false); setManualStatus('') }, 2000)
-      }
-    } catch (e: unknown) {
-      setManualStatus(`Error: ${e instanceof Error ? e.message : String(e)}`)
-    }
-  }
-
-  // ── Mark Published ─────────────────────────────────────────────────────────
-  async function markPublished() {
-    try {
-      const r = await fetch('/api/mark-published', { method: 'POST' })
-      const data = await r.json()
-      if (data.error) appendLog(`✗ ${data.error}`, 'err')
-      else appendLog(`✓ Keyword "${data.keyword}" added to published keywords`, 'ok')
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      appendLog(`✗ ${msg}`, 'err')
-    }
-  }
-
-  // ── Render ─────────────────────────────────────────────────────────────────
+export default function LandingPage() {
   return (
-    <>
-      {/* Header */}
-      <div className="header">
-        <div>
-          <h1>West Michigan Blog Dashboard</h1>
-          <p>Jason O&apos;Brien — SEO Blog Post Generator · jobrienhomes.com</p>
+    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#fff', color: '#1a2e44' }}>
+
+      {/* ── Nav ─────────────────────────────────────────────────────────────── */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        background: 'rgba(13,31,45,0.97)', backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        padding: '0 32px', display: 'flex', alignItems: 'center',
+        height: '60px', gap: '32px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginRight: 'auto' }}>
+          <span style={{ fontSize: '18px', color: '#c8a96e' }}>✦</span>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>RankReady</span>
         </div>
-        <button
-          className="btn btn-outline btn-sm"
-          style={{ borderColor: '#555', color: '#ccc' }}
-          onClick={refreshStatus}
-          disabled={running}
+        {NAV_LINKS.map(l => (
+          <a key={l.href} href={l.href} style={{ fontSize: '13px', color: '#aab8c8', textDecoration: 'none', fontWeight: 500 }}>
+            {l.label}
+          </a>
+        ))}
+        <Link
+          href="/login"
+          style={{
+            marginLeft: '8px', padding: '8px 20px',
+            background: '#c8a96e', color: '#1a2e44',
+            borderRadius: '7px', fontSize: '13px', fontWeight: 700,
+            textDecoration: 'none',
+          }}
         >
-          ↻ Refresh
-        </button>
-      </div>
+          Log In
+        </Link>
+      </nav>
 
-      {/* Status bar */}
-      <div className="status-bar">
-        <span className="status-label">Files:</span>
-        <span className={`pill ${pillSources.ok ? 'ok' : 'missing'}`}>
-          <span className="dot"></span>Research
-          {pillSources.mtime && <span style={{ color: '#888', fontWeight: 400 }}>{pillSources.mtime}</span>}
-        </span>
-        <span className={`pill ${pillDraft.ok ? 'ok' : 'missing'}`}>
-          <span className="dot"></span>Draft
-          {pillDraft.mtime && <span style={{ color: '#888', fontWeight: 400 }}>{pillDraft.mtime}</span>}
-        </span>
-        <span className={`pill ${pillImage.ok ? 'ok' : 'missing'}`}>
-          <span className="dot"></span>Image
-          {pillImage.mtime && <span style={{ color: '#888', fontWeight: 400 }}>{pillImage.mtime}</span>}
-        </span>
-      </div>
-
-      <div className="main">
-
-        {/* Topic Ideas */}
-        <div className="topics-section">
-          <div className="topics-header">
-            <div>
-              <h2>SEO Topic Ideas</h2>
-              <p>AI-generated topics ranked by search opportunity — click one to select it</p>
-              {topicsDebug && (
-                <p style={{ fontSize: '11px', color: '#8492a6', marginTop: '2px' }}>
-                  Excluded {topicsDebug.total_excluded ?? 0} existing posts
-                  ({topicsDebug.site_scraped ?? 0} scraped from site · {topicsDebug.redis_keywords ?? 0} tracked · {topicsDebug.ghl_posts_found ?? 0} from GHL) ·
-                  {topicsDebug.uncovered_cities ?? 0} cities uncovered
-                </p>
-              )}
-            </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
-              {syncStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{syncStatus}</span>}
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => { setShowManualEntry(v => !v); setManualStatus('') }}
-                title="Manually add existing post titles to the exclusion list"
-              >
-                + Add Existing
-              </button>
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={syncPostsFromGhl}
-                disabled={running || topicsLoading}
-                title="Import all existing GHL posts into the exclusion list"
-              >
-                ↻ Sync from GHL
-              </button>
-              <button
-                className="btn btn-gold btn-sm"
-                id="btn-suggest"
-                onClick={handleSuggestTopics}
-                disabled={running || topicsLoading}
-              >
-                {topicsLoading
-                  ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Generating…</>
-                  : '✦ Suggest Topics'}
-              </button>
-            </div>
-          </div>
-          {showManualEntry && (
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #2a3a4a', background: '#0d1f2d' }}>
-              <p style={{ fontSize: '12px', color: '#c8a96e', marginBottom: '8px', fontWeight: 600 }}>
-                Paste your existing post titles — one per line — to exclude them from suggestions:
-              </p>
-              <textarea
-                style={{ width: '100%', minHeight: '100px', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px', fontSize: '12px', fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
-                placeholder={'Moving to Portage Michigan: 10 Things to Know\nLiving in Mattawan Michigan: Pros and Cons\nKalamazoo real estate in March 2026 — what the numbers actually say'}
-                value={manualTitles}
-                onChange={e => setManualTitles(e.target.value)}
-              />
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                <button className="btn btn-gold btn-sm" onClick={addManualPosts} disabled={!manualTitles.trim()}>Save to Exclusion List</button>
-                <button className="btn btn-outline btn-sm" onClick={() => { setShowManualEntry(false); setManualStatus('') }}>Cancel</button>
-                {manualStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{manualStatus}</span>}
-              </div>
-            </div>
-          )}
-          <div className="topics-body">
-            {topicsLoaded && suggestedTopics.length > 0 ? (
-              <div className="topics-grid" style={{ display: 'grid' }}>
-                {suggestedTopics.map((t, i) => (
-                  <div
-                    key={i}
-                    className={`topic-card${selectedTopicIdx === i ? ' selected' : ''}`}
-                    onClick={() => !running && selectTopic(i)}
-                  >
-                    <div className="topic-card-title">{escHtml(t.title)}</div>
-                    <div className="topic-card-keyword">{escHtml(t.keyword || '')}</div>
-                    <div className="topic-card-meta">
-                      {t.cluster && (
-                        <span className={`topic-tag ${CLUSTER_CLASS[t.cluster] || 'tag-market'}`}>
-                          {CLUSTER_LABEL[t.cluster] || t.cluster}
-                        </span>
-                      )}
-                      {t.tier && (
-                        <span className={`topic-tag ${TIER_CLASS[t.tier] || ''}`}>
-                          {t.tier.replace('-', ' ')}
-                        </span>
-                      )}
-                    </div>
-                    <div className="topic-card-rationale">{escHtml(t.gap_analysis || t.rationale || '')}</div>
-                    {t.target_length && (
-                      <div className="topic-card-length">🎯 {escHtml(t.target_length)}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="topics-placeholder">
-                {topicsError
-                  ? <><span>⚠</span>{topicsError}</>
-                  : topicsLoading
-                  ? <><span>⏳</span>Asking Claude to suggest topics for your service area…</>
-                  : <><span>✦</span>Click &quot;Suggest Topics&quot; to get 6 SEO-optimized topic ideas for your service area.<br />Click any card to select it, then run the workflow below.</>
-                }
-              </div>
-            )}
-          </div>
+      {/* ── Hero ────────────────────────────────────────────────────────────── */}
+      <section style={{
+        background: 'linear-gradient(160deg, #0d1f2d 0%, #1a2e44 60%, #0f2535 100%)',
+        color: '#fff', padding: '100px 24px 90px', textAlign: 'center',
+      }}>
+        <div style={{ display: 'inline-block', background: 'rgba(200,169,110,0.15)', border: '1px solid rgba(200,169,110,0.3)', borderRadius: '20px', padding: '5px 16px', marginBottom: '28px' }}>
+          <span style={{ fontSize: '12px', color: '#c8a96e', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>AI Blog Engine for Real Estate Agents</span>
+        </div>
+        <h1 style={{
+          fontSize: 'clamp(36px, 5.5vw, 64px)', fontWeight: 800,
+          lineHeight: 1.1, maxWidth: '820px', margin: '0 auto 24px',
+          letterSpacing: '-0.02em',
+        }}>
+          Stop Paying for Blog Content
+          <br />
+          <span style={{ color: '#c8a96e' }}>That Doesn&apos;t Rank.</span>
+        </h1>
+        <p style={{
+          fontSize: 'clamp(16px, 2vw, 20px)', color: '#8fa8c0',
+          maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6,
+        }}>
+          RankReady finds the exact search gaps in your service area, writes SEO-optimized posts in your voice, and publishes them to your blog — in minutes, not days.
+        </p>
+        <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Link
+            href="/login"
+            style={{
+              padding: '15px 36px', background: '#c8a96e', color: '#1a2e44',
+              borderRadius: '9px', fontSize: '16px', fontWeight: 700,
+              textDecoration: 'none', display: 'inline-block',
+            }}
+          >
+            Go to Dashboard →
+          </Link>
+          <a
+            href="#how-it-works"
+            style={{
+              padding: '15px 36px', background: 'transparent',
+              border: '1.5px solid rgba(255,255,255,0.2)', color: '#fff',
+              borderRadius: '9px', fontSize: '16px', fontWeight: 600,
+              textDecoration: 'none', display: 'inline-block',
+            }}
+          >
+            See How It Works
+          </a>
         </div>
 
-        {/* Topic & Keyword bar */}
-        <div className="topic-bar">
-          <div className="topic-bar-row">
-            <label>Topic:</label>
-            <div className="topic-input-wrap">
-              <input
-                id="topic-input"
-                type="text"
-                placeholder="e.g. Moving to Kalamazoo Michigan: 12 Things to Know"
-                autoComplete="off"
-                value={topicValue}
-                onChange={e => setTopicValue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') saveTopic() }}
-              />
+        {/* Stats row */}
+        <div style={{ display: 'flex', gap: '48px', justifyContent: 'center', marginTop: '72px', flexWrap: 'wrap' }}>
+          {[
+            { num: '30+', label: 'City keywords covered per agent' },
+            { num: '< 10 min', label: 'From topic to published draft' },
+            { num: '100%', label: 'Written in your voice, not AI-speak' },
+          ].map(s => (
+            <div key={s.num} style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: '#c8a96e', letterSpacing: '-0.02em' }}>{s.num}</div>
+              <div style={{ fontSize: '12px', color: '#6a8099', marginTop: '4px', maxWidth: '160px' }}>{s.label}</div>
             </div>
-            <label style={{ whiteSpace: 'nowrap' }}>Primary Keyword:</label>
-            <div className="keyword-input-wrap">
-              <input
-                id="keyword-input"
-                type="text"
-                placeholder="e.g. moving to kalamazoo michigan"
-                autoComplete="off"
-                value={keywordValue}
-                onChange={e => setKeywordValue(e.target.value)}
-              />
-            </div>
-            <button className="btn btn-outline btn-sm" onClick={saveTopic} disabled={running}>Save</button>
-            <span className={`save-flash${topicFlash ? ' show' : ''}`}>Saved!</span>
-          </div>
+          ))}
         </div>
+      </section>
 
-        {/* Steps */}
-        <div className="steps">
-
-          {/* Step 1: Research */}
-          <div className="card">
-            <div className="card-header">
-              <div className="step-num">1</div>
-              <div><h2>Pull Research</h2><p>Market data + local news</p></div>
-            </div>
-            <div className="card-body">
-              <p className="card-desc">Pulls current market data from Tavily Search, Zillow Research, and GKAR for the topic and cities in your service area.</p>
-              <button
-                className="btn btn-primary btn-full"
-                id="btn-research"
-                onClick={runResearch}
-                disabled={running}
-              >
-                {running && runningBtn === 'Pull Research'
-                  ? <><span className="spinner"></span> Running…</>
-                  : 'Pull Research'}
-              </button>
-              <div className="section-label">Research Data</div>
-              <div className="sources-panel">{sourcesText}</div>
-            </div>
-          </div>
-
-          {/* Step 2: Write Draft */}
-          <div className="card">
-            <div className="card-header">
-              <div className="step-num">2</div>
-              <div><h2>Write the Draft</h2><p>AI writes · you review · you edit</p></div>
-            </div>
-            <div className="card-body">
-              <p className="card-desc">Claude AI writes the full SEO blog post using the research and your topic — in your voice, following all the rules from CLAUDE.md. Voice and spell checks run automatically. Review and edit before moving on.</p>
-              {apiKeyMissing && (
-                <div style={{ display: 'block', background: '#fff8e1', border: '1px solid #f9a825', borderRadius: '6px', padding: '10px 12px', fontSize: '12px', color: '#6d4c00', lineHeight: 1.5 }}>
-                  <strong>ANTHROPIC_API_KEY not set.</strong> Add it to your environment variables.
-                </div>
-              )}
-              <button
-                className="btn btn-gold btn-full"
-                id="btn-write"
-                onClick={() => runPhase('write_draft', 'Write Draft with AI')}
-                disabled={running}
-              >
-                {running && runningBtn === 'Write Draft with AI'
-                  ? <><span className="spinner"></span> Running…</>
-                  : 'Write Draft with AI'}
-              </button>
-              <hr className="divider" />
-              <div className="draft-toolbar">
-                <span className="section-label" style={{ alignSelf: 'center' }}>Draft Editor</span>
-                <button className="btn btn-outline btn-sm" onClick={saveDraft} disabled={running}>💾 Save</button>
-                <button className="btn btn-outline btn-sm" onClick={loadDraft} disabled={running}>↻ Reload</button>
-                <span className={`save-flash${saveFlash ? ' show' : ''}`}>Saved!</span>
-                <span className="draft-hint">{wordCount} words</span>
-              </div>
-              <textarea
-                id="draft-editor"
-                className="draft-area"
-                placeholder="Click 'Write Draft with AI' or paste your draft here. Cmd+S to save."
-                value={draftContent}
-                onChange={e => {
-                  setDraftContent(e.target.value)
-                  updateWordCount(e.target.value)
-                }}
-              />
-            </div>
-          </div>
-
-          {/* Step 3: Review & Publish */}
-          <div className="card">
-            <div className="card-header">
-              <div className="step-num">3</div>
-              <div><h2>Review &amp; Publish</h2><p>SEO check · image · Notion</p></div>
-            </div>
-            <div className="card-body">
-
-              {/* SEO Check */}
-              <div className="section-label">SEO Check</div>
-              <button
-                className="btn btn-primary btn-full"
-                id="btn-seo"
-                onClick={runSeoCheck}
-                disabled={running}
-              >
-                {running && runningBtn === 'Run SEO Check'
-                  ? <><span className="spinner"></span> Running…</>
-                  : 'Run SEO Check'}
-              </button>
-              {seoResultVisible && seoResult && (
-                <div>
-                  <div className={`seo-score-bar${seoResult.pass ? '' : ' fail'}`}>
-                    {seoResult.pass ? '✓ PASS' : '✗ FAIL'} — {seoResult.required_score} required checks · {seoResult.score} total
-                  </div>
-                  <div className="seo-results">
-                    {(seoResult.checks || []).map((c, i) => (
-                      <div key={i} className="seo-check-item">
-                        <span className="seo-icon">{c.pass ? '✓' : (c.required ? '✗' : '○')}</span>
-                        <span className="seo-check-name">{c.check.replace(/_/g, ' ')}</span>
-                        <span className="seo-check-detail">{c.detail || ''}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <hr className="divider" />
-
-              {/* Hero Image */}
-              <div className="section-label">Hero Image</div>
-              <div className="image-panel" id="image-panel">
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Hero image"
-                    onError={e => {
-                      ;(e.target as HTMLImageElement).parentElement!.innerHTML =
-                        '<div class="image-placeholder"><span>⚠</span>Image URL found but preview failed.</div>'
-                    }}
-                  />
-                ) : imageLocalExists ? (
-                  <img src={`/api/hero-image?t=${imageTs}`} alt="Hero image" />
-                ) : (
-                  <div className="image-placeholder"><span>🖼</span>Click &quot;Generate Image&quot; in Step 3.</div>
-                )}
-              </div>
-              <div className="row">
-                <button
-                  className="btn btn-outline btn-sm btn-full"
-                  id="btn-image"
-                  onClick={() => runPhase('image', 'Generate Image')}
-                  disabled={running}
-                >
-                  {running && runningBtn === 'Generate Image'
-                    ? <><span className="spinner"></span> Running…</>
-                    : 'Generate Image'}
-                </button>
-              </div>
-
-              <hr className="divider" />
-
-              {/* Publish */}
-              <button
-                className="btn btn-success btn-full"
-                id="btn-publish"
-                onClick={() => runPhase('publish', 'Publish to GHL')}
-                disabled={running}
-              >
-                {running && runningBtn === 'Publish to GHL'
-                  ? <><span className="spinner"></span> Running…</>
-                  : 'Publish to GHL'}
-              </button>
-              <button
-                className="btn btn-outline btn-sm btn-full"
-                id="btn-mark"
-                onClick={markPublished}
-                disabled={running}
-              >
-                ✓ Mark Keyword as Published
-              </button>
-            </div>
-          </div>
-
-        </div>{/* /.steps */}
-
-        {/* SEO / Copy Fields */}
-        <div className="seo-fields">
-          <div className="seo-fields-header">
-            <div className="step-num" style={{ background: '#c8a96e' }}>4</div>
-            <div><h2 style={{ fontSize: '14px', fontWeight: 600 }}>Blog Fields</h2><p style={{ fontSize: '11px', color: '#c8a96e' }}>Copy into your CMS when publishing</p></div>
-            <button
-              className="btn btn-outline btn-sm"
-              style={{ marginLeft: 'auto', borderColor: '#555', color: '#aaa' }}
-              onClick={loadSeoFields}
-              disabled={running}
-            >
-              ↻ Refresh
-            </button>
-          </div>
-          <div className="seo-fields-grid">
-            <div className="seo-field-cell">
-              <div className="section-label" style={{ marginBottom: '6px' }}>Title (H1 / Page Title)</div>
-              <div id="seo-title" style={{ fontSize: '13px', fontWeight: 600, color: '#1a2e44', marginBottom: '8px', lineHeight: 1.4 }}>{seoTitle}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoTitle, e.currentTarget)}>Copy</button>
-            </div>
-            <div className="seo-field-cell">
-              <div className="section-label" style={{ marginBottom: '6px' }}>URL Slug</div>
-              <div id="seo-slug" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#1a6b9e', marginBottom: '8px', wordBreak: 'break-all' }}>{seoSlug}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoSlug, e.currentTarget)}>Copy</button>
-            </div>
-            <div className="seo-field-cell" style={{ borderRight: 'none' }}>
-              <div className="section-label" style={{ marginBottom: '6px' }}>Primary Keyword</div>
-              <div id="seo-keyword" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#1a2e44', marginBottom: '8px' }}>{seoKeyword}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoKeyword, e.currentTarget)}>Copy</button>
-            </div>
-          </div>
-          <div className="seo-field-cell2">
-            <div>
-              <div className="section-label" style={{ marginBottom: '6px' }}>Meta Description (140–155 chars)</div>
-              <div id="seo-desc" style={{ fontSize: '12px', color: '#3a4a5a', marginBottom: '4px', lineHeight: 1.5 }}>{seoDesc}</div>
-              <div id="seo-desc-len" style={{ fontSize: '10px', color: '#8492a6', marginBottom: '6px' }}>{seoDescLen}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoDesc, e.currentTarget)}>Copy</button>
-            </div>
-            <div>
-              <div className="section-label" style={{ marginBottom: '6px' }}>Image Alt Text + Download</div>
-              <div id="seo-alt" style={{ fontSize: '12px', color: '#3a4a5a', marginBottom: '8px' }}>{seoAlt}</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="btn btn-outline btn-sm" onClick={e => copyField(seoAlt, e.currentTarget)}>Copy Alt Text</button>
-                <a className="btn btn-success btn-sm" href="/api/hero-image" download="hero_image.jpg">Download Image</a>
-              </div>
-            </div>
-          </div>
+      {/* ── Problem section ─────────────────────────────────────────────────── */}
+      <section style={{ background: '#f7f8fa', padding: '80px 24px' }}>
+        <div style={{ maxWidth: '740px', margin: '0 auto', textAlign: 'center' }}>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, marginBottom: '20px', letterSpacing: '-0.01em' }}>
+            Most agents&apos; blogs are invisible on Google.
+          </h2>
+          <p style={{ fontSize: '17px', color: '#4a5a6a', lineHeight: 1.7, marginBottom: '20px' }}>
+            They publish when they feel like it, pick topics from the top of their head, and write posts that sound like every other agent in the country. Google has no reason to rank them.
+          </p>
+          <p style={{ fontSize: '17px', color: '#4a5a6a', lineHeight: 1.7, marginBottom: '20px' }}>
+            The agents who win on search do one thing differently: they systematically cover every city and every keyword in their service area, posting consistently, with content that actually answers local search queries.
+          </p>
+          <p style={{ fontSize: '17px', color: '#1a2e44', lineHeight: 1.7, fontWeight: 600 }}>
+            That used to require a full-time content team. Now it takes ten minutes a week.
+          </p>
         </div>
+      </section>
 
-        {/* Log Console */}
-        <div className="console-card">
-          <div className="console-header">
-            <span>Live Log</span>
-            <span id="run-badge">
-              {consoleBadge && (
-                <span className={`badge badge-${consoleBadge}`}>
-                  {{ running: 'Running', done: 'Done', error: 'Error' }[consoleBadge] || consoleBadge}
-                </span>
-              )}
-            </span>
-            <span id="console-status" style={{ fontSize: '11px', color: '#aaa', marginLeft: 'auto' }}>{consoleStatus}</span>
-            <button
-              className="btn btn-outline btn-sm"
-              style={{ borderColor: '#444', color: '#aaa', marginLeft: '8px' }}
-              onClick={clearConsole}
-            >
-              Clear
-            </button>
+      {/* ── Features ────────────────────────────────────────────────────────── */}
+      <section id="features" style={{ padding: '90px 24px', background: '#fff' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '14px' }}>
+              Everything you need to dominate local search
+            </h2>
+            <p style={{ fontSize: '17px', color: '#6a7a8a', maxWidth: '540px', margin: '0 auto' }}>
+              Built specifically for real estate agents who want organic leads without hiring a content agency.
+            </p>
           </div>
-          <div id="console" ref={consoleRef}>
-            {logLines.map((l, i) => (
-              <div key={i} className={`line-${l.cls}`}>{l.text}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+            {FEATURES.map(f => (
+              <div key={f.title} style={{
+                border: '1.5px solid #e8edf2', borderRadius: '12px', padding: '28px',
+                background: '#fafbfc',
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '14px' }}>{f.icon}</div>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a2e44', marginBottom: '10px' }}>{f.title}</h3>
+                <p style={{ fontSize: '14px', color: '#5a6a7a', lineHeight: 1.65 }}>{f.body}</p>
+              </div>
             ))}
           </div>
         </div>
+      </section>
 
-      </div>
-    </>
+      {/* ── How It Works ────────────────────────────────────────────────────── */}
+      <section id="how-it-works" style={{ padding: '90px 24px', background: '#0d1f2d' }}>
+        <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.015em', marginBottom: '14px' }}>
+              From zero to published in three steps
+            </h2>
+            <p style={{ fontSize: '16px', color: '#6a8099', maxWidth: '480px', margin: '0 auto' }}>
+              No prompts to write. No tools to configure. Just pick, write, publish.
+            </p>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+            {STEPS.map((step, i) => (
+              <div key={step.num} style={{
+                display: 'flex', gap: '28px', alignItems: 'flex-start',
+                paddingBottom: i < STEPS.length - 1 ? '40px' : '0',
+                borderLeft: i < STEPS.length - 1 ? '2px solid rgba(200,169,110,0.2)' : 'none',
+                marginLeft: '21px',
+                paddingLeft: '36px',
+                position: 'relative',
+              }}>
+                <div style={{
+                  position: 'absolute', left: '-21px', top: '0',
+                  width: '42px', height: '42px', background: '#c8a96e',
+                  borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: '16px', color: '#1a2e44', flexShrink: 0,
+                }}>
+                  {step.num}
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '19px', fontWeight: 700, color: '#fff', marginBottom: '10px' }}>{step.title}</h3>
+                  <p style={{ fontSize: '15px', color: '#7a95aa', lineHeight: 1.65 }}>{step.body}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Social Proof ────────────────────────────────────────────────────── */}
+      <section style={{ padding: '90px 24px', background: '#f7f8fa' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 800, textAlign: 'center', marginBottom: '48px', letterSpacing: '-0.01em' }}>
+            Agents are already winning on search
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
+            {SOCIAL_PROOF.map(t => (
+              <div key={t.name} style={{
+                background: '#fff', borderRadius: '12px', padding: '28px',
+                border: '1.5px solid #e8edf2', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+              }}>
+                <p style={{ fontSize: '14px', color: '#3a4a5a', lineHeight: 1.7, marginBottom: '20px', fontStyle: 'italic' }}>
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1a2e44' }}>{t.name}</div>
+                  <div style={{ fontSize: '12px', color: '#8492a6', marginTop: '2px' }}>{t.role}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Pricing / CTA ───────────────────────────────────────────────────── */}
+      <section id="pricing" style={{ padding: '90px 24px', background: '#fff', textAlign: 'center' }}>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ display: 'inline-block', background: '#e6f7ee', borderRadius: '20px', padding: '5px 16px', marginBottom: '24px' }}>
+            <span style={{ fontSize: '12px', color: '#1d8348', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Simple Pricing</span>
+          </div>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '16px' }}>
+            One flat monthly rate.<br />Unlimited posts.
+          </h2>
+          <p style={{ fontSize: '17px', color: '#6a7a8a', lineHeight: 1.6, marginBottom: '40px' }}>
+            No per-post fees. No word limits. No separate tool subscriptions. Write as many posts as your market needs.
+          </p>
+          <div style={{
+            background: '#1a2e44', borderRadius: '16px', padding: '40px',
+            color: '#fff', marginBottom: '32px',
+          }}>
+            <div style={{ fontSize: '52px', fontWeight: 900, color: '#c8a96e', letterSpacing: '-0.03em', marginBottom: '6px' }}>
+              $97<span style={{ fontSize: '20px', fontWeight: 500, color: '#8fa8c0' }}>/mo</span>
+            </div>
+            <div style={{ fontSize: '14px', color: '#8fa8c0', marginBottom: '28px' }}>Cancel anytime</div>
+            <ul style={{ listStyle: 'none', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
+              {[
+                'AI gap analysis across your full service area',
+                'Live blog scraping to prevent duplicate content',
+                'Full draft written in your voice + auto voice check',
+                'SEO scoring, spell check, slug + meta generation',
+                'Hero image generation',
+                'One-click publish to GoHighLevel',
+                'Unlimited topics, unlimited posts',
+              ].map(item => (
+                <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '14px', color: '#c8d8e8', alignItems: 'flex-start' }}>
+                  <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                  {item}
+                </li>
+              ))}
+            </ul>
+            <Link
+              href="/login"
+              style={{
+                display: 'block', width: '100%', padding: '15px',
+                background: '#c8a96e', color: '#1a2e44',
+                borderRadius: '9px', fontSize: '16px', fontWeight: 700,
+                textDecoration: 'none', textAlign: 'center',
+                boxSizing: 'border-box',
+              }}
+            >
+              Access Your Dashboard →
+            </Link>
+          </div>
+          <p style={{ fontSize: '13px', color: '#aab8c8' }}>
+            Already a member?{' '}
+            <Link href="/login" style={{ color: '#1a6b9e', textDecoration: 'none', fontWeight: 600 }}>
+              Sign in here
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      <footer style={{
+        background: '#0d1f2d', borderTop: '1px solid rgba(255,255,255,0.06)',
+        padding: '32px 24px', textAlign: 'center',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
+          <span style={{ color: '#c8a96e', fontSize: '16px' }}>✦</span>
+          <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>RankReady</span>
+        </div>
+        <p style={{ fontSize: '12px', color: '#4a5a6a' }}>
+          AI Blog Engine for Real Estate Agents · Built for local search dominance
+        </p>
+      </footer>
+
+    </div>
   )
 }
