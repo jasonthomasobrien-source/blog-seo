@@ -388,8 +388,8 @@ export default function Dashboard() {
             }
             break
           } else {
-            if (isSeoPhase) {
-              fullOutput += msg
+            if (isSeoPhase && msg.trimStart().startsWith('{')) {
+              fullOutput = msg  // capture only the JSON line, not all log output
             }
             appendLog(msg, classForLine(msg))
           }

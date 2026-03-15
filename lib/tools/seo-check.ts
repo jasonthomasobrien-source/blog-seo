@@ -164,10 +164,10 @@ function checkSlug(meta: Record<string, string>, keyword: string): SeoCheck {
 function checkH2Count(bodyMd: string): SeoCheck {
   const h2s = getHeadings(bodyMd, 2)
   const count = h2s.length
-  if (count >= 3 && count <= 5) {
+  if (count >= 3 && count <= 12) {
     return { check: 'h2_count', pass: true, required: true, detail: `${count} H2 subheadings found.` }
   }
-  return { check: 'h2_count', pass: false, required: true, detail: `${count} H2 subheadings (need 3-5). Found: ${JSON.stringify(h2s)}` }
+  return { check: 'h2_count', pass: false, required: true, detail: `${count} H2 subheadings (need 3-12). Found: ${JSON.stringify(h2s)}` }
 }
 
 function checkH2HasGeo(bodyMd: string): SeoCheck {
@@ -199,7 +199,7 @@ function checkExternalLinks(bodyMd: string): SeoCheck {
 function checkImages(bodyMd: string): SeoCheck {
   const alts = getImageAlts(bodyMd)
   if (!alts.length) {
-    return { check: 'images', pass: false, required: true, detail: 'No images found. Add at least 1 image with descriptive alt text.' }
+    return { check: 'images', pass: false, required: false, detail: 'No images in draft markdown. Hero image is generated separately — add an ![alt](url) tag when publishing to your CMS.' }
   }
   const weakAlts = alts.filter(alt => {
     const words = alt.split(/\s+/)
@@ -208,9 +208,9 @@ function checkImages(bodyMd: string): SeoCheck {
     return words.length < 4 || !hasGeo
   })
   if (weakAlts.length) {
-    return { check: 'images', pass: false, required: true, detail: `${alts.length} image(s) found but alt text needs improvement: ${JSON.stringify(weakAlts)}. Use descriptive, location-aware alt text.` }
+    return { check: 'images', pass: false, required: false, detail: `${alts.length} image(s) found but alt text needs improvement: ${JSON.stringify(weakAlts)}. Use descriptive, location-aware alt text.` }
   }
-  return { check: 'images', pass: true, required: true, detail: `${alts.length} image(s) with descriptive alt text.` }
+  return { check: 'images', pass: true, required: false, detail: `${alts.length} image(s) with descriptive alt text.` }
 }
 
 function checkMichiganMention(bodyMd: string): SeoCheck {
