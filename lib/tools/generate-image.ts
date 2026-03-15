@@ -37,26 +37,39 @@ function buildUnsplashQuery(prompt: string): string {
 }
 
 async function fetchUnsplash(prompt: string, apiKey: string, onLog: (l: string) => void): Promise<string> {
-  const query = buildUnsplashQuery(prompt)
-  onLog(`Unsplash search: "${query}"`)
-  try {
-    const resp = await fetch(
-      `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high`,
-      { headers: { Authorization: `Client-ID ${apiKey}` } }
-    )
-    if (!resp.ok) {
-      onLog(`Unsplash failed: HTTP ${resp.status}`)
+  const queries = [
+    buildUnsplashQuery(prompt),
+    'michigan neighborhood house residential',
+    'house neighborhood suburban street',
+  ]
+  for (const query of queries) {
+    onLog(`Unsplash search: "${query}"`)
+    try {
+      const resp = await fetch(
+        `https://api.unsplash.com/photos/random?query=${encodeURIComponent(query)}&orientation=landscape&content_filter=high`,
+        { headers: { Authorization: `Client-ID ${apiKey}` } }
+      )
+      if (resp.status === 404) {
+        onLog(`Unsplash: no photos for "${query}", trying broader query…`)
+        continue
+      }
+      if (!resp.ok) {
+        onLog(`Unsplash failed: HTTP ${resp.status}`)
+        return ''
+      }
+      const data = await resp.json()
+      const url = data?.urls?.regular || ''
+      if (url) {
+        onLog(`Unsplash photo by ${data?.user?.name || '?'}`)
+        return url
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      onLog(`Unsplash error: ${msg}`)
       return ''
     }
-    const data = await resp.json()
-    const url = data?.urls?.regular || ''
-    if (url) onLog(`Unsplash photo by ${data?.user?.name || '?'}`)
-    return url
-  } catch (e: unknown) {
-    const msg = e instanceof Error ? e.message : String(e)
-    onLog(`Unsplash failed: ${msg}`)
-    return ''
   }
+  return ''
 }
 
 function buildLeonardoPrompt(userPrompt: string): string {
@@ -165,7 +178,8 @@ export async function generateImage(
     }
 
     if (!imageUrl) {
-      return { success: false, error: 'Image generation failed — no URL returned.' }
+      onLog('⚠ No image found from any source. Skipping image — you can add one manually when publishing.')
+      return { success: true }
     }
 
     onLog(`✓ Image URL from ${source}: ${imageUrl}`)
