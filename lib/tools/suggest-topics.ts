@@ -120,22 +120,42 @@ export async function suggestTopics(
         : []),
     ].join('\n')
 
-    const hasExistingContent = ghlTitles.length > 0 || publishedKeywords.length > 0
+    // Extract which cities already have community guides — city-level deduplication
+    const allTitlesAndKeywords = [
+      ...ghlTitles,
+      ...publishedKeywords,
+      ...publishedEntries.map(e => e.title || ''),
+    ]
+
+    const coveredCityGuides: string[] = []
+    for (const city of allCities) {
+      const cityLower = city.toLowerCase().replace(' mi', '').trim()
+      const hasGuide = allTitlesAndKeywords.some(t =>
+        t.toLowerCase().includes(cityLower) &&
+        (t.toLowerCase().includes('moving') || t.toLowerCase().includes('living') ||
+         t.toLowerCase().includes('cost of living') || t.toLowerCase().includes('neighborhood') ||
+         t.toLowerCase().includes('community guide') || t.toLowerCase().includes('things to know'))
+      )
+      if (hasGuide) coveredCityGuides.push(city)
+    }
+
+    const uncoveredCities = allCities.filter(c => !coveredCityGuides.includes(c))
+
+    const hardExclusion = coveredCityGuides.length > 0
+      ? `\nHARD RULE — DO NOT suggest a community guide for ANY of these cities (already covered):\n${coveredCityGuides.map(c => `- ${c}`).join('\n')}`
+      : ''
 
     const gapContext = `
-CITIES WITH NO COVERAGE YET (prioritize these):
-${allCities.filter(city => {
-  const cityLower = city.toLowerCase().replace(' mi', '').trim()
-  const allCovered = [...ghlTitles, ...publishedKeywords]
-  return !allCovered.some(t => t.toLowerCase().includes(cityLower))
-}).map(c => `- ${c}`).join('\n') || '(all cities have at least one post)'}
+CITIES WITH ZERO COMMUNITY GUIDE COVERAGE (highest priority — suggest these first):
+${uncoveredCities.slice(0, 20).map(c => `- ${c}`).join('\n') || '(all Tier 1/2 cities are covered)'}
+${hardExclusion}
 
 CONTENT TYPE GAPS TO IDENTIFY:
 ${CONTENT_TYPES.map(t => `- ${t}`).join('\n')}`
 
     const userPrompt = `Today is ${monthYear}. Perform a gap analysis and suggest the ${count} highest-priority SEO blog topics for Jason O'Brien's West Michigan real estate blog.
 ${coveredBlock}
-${hasExistingContent ? gapContext : ''}
+${gapContext}
 
 Return ONLY valid JSON — no markdown, no explanation. Format:
 {
