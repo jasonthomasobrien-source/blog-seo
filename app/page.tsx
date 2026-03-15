@@ -10,6 +10,7 @@ interface Topic {
   tier?: string
   target_length?: string
   rationale?: string
+  gap_analysis?: string
 }
 
 interface SeoCheck {
@@ -611,7 +612,7 @@ export default function Dashboard() {
                         </span>
                       )}
                     </div>
-                    <div className="topic-card-rationale">{escHtml(t.rationale || '')}</div>
+                    <div className="topic-card-rationale">{escHtml(t.gap_analysis || t.rationale || '')}</div>
                     {t.target_length && (
                       <div className="topic-card-length">🎯 {escHtml(t.target_length)}</div>
                     )}
