@@ -125,11 +125,10 @@ function checkGreetingOpener(text: string): VoiceFlag[] {
 }
 
 function checkEmojiInBody(text: string): VoiceFlag[] {
-  // Strip the first H1 heading before checking
-  const body = text.replace(/^#[^\n]*\n/m, '')
-  const emojiPattern =
-    /\p{Emoji}/gu
-  const matches = body.match(emojiPattern) || []
+  // Strip front matter and first H1 heading before checking
+  const stripped = text.replace(/^---[\s\S]*?---\n?/, '').replace(/^#[^\n]*\n/m, '')
+  // Use Extended_Pictographic to match actual emoji only (not digits/# which also have Emoji property)
+  const matches = stripped.match(/\p{Extended_Pictographic}/gu) || []
   if (matches.length) {
     return [{
       type: 'emoji_in_body',
