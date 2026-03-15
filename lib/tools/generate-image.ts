@@ -1,3 +1,4 @@
+import sharp from 'sharp'
 import { readFile, writeFileBytes, writeFile } from '../storage'
 
 const LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1'
@@ -189,21 +190,36 @@ export async function generateImage(
     const imgResp = await fetch(imageUrl)
     if (!imgResp.ok) throw new Error(`Failed to download image: HTTP ${imgResp.status}`)
     const arrayBuffer = await imgResp.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const rawBuffer = Buffer.from(arrayBuffer)
 
-    // Upload to Supabase Storage
+    // Resize to 600×400 cover crop, max ~180KB
+    onLog('Resizing image to 600×400…')
+    const resized = await sharp(rawBuffer)
+      .resize(600, 400, { fit: 'cover', position: 'centre' })
+      .jpeg({ quality: 82, mozjpeg: true })
+      .toBuffer()
+    onLog(`Image size: ${Math.round(resized.length / 1024)}KB`)
+
+    // Upload to Blob Storage
     onLog('Uploading hero_image.jpg to storage…')
-    await writeFileBytes('hero_image.jpg', buffer, 'image/jpeg')
+    const storedUrl = await writeFileBytes('hero_image.jpg', resized, 'image/jpeg')
 
-    // Update draft front matter with image_url if not already set
+    // Build alt text from prompt or default
+    const altText = prompt.length > 20
+      ? prompt.replace(/[,.].*$/, '').trim().substring(0, 120)
+      : 'West Michigan neighborhood homes — Kalamazoo area real estate'
+
+    // Update draft front matter with image_url and image_alt
     if (draftText) {
-      const updatedDraft = draftText.replace(
+      let updatedDraft = draftText.replace(
         /^(---[\s\S]*?)(image_url:.*?\n)?(---)/m,
-        (match, p1, _p2, p3) => `${p1}image_url: ${imageUrl}\n${p3}`
+        (_match, p1, _p2, p3) => `${p1}image_url: ${storedUrl}\nimage_alt: ${altText}\n${p3}`
       )
-      if (updatedDraft !== draftText) {
+      if (updatedDraft === draftText) {
+        // front matter didn't match pattern — skip silently
+      } else {
         await writeFile('draft.md', updatedDraft)
-        onLog('Updated draft front matter with image_url.')
+        onLog('Updated draft front matter with image_url and image_alt.')
       }
     }
 

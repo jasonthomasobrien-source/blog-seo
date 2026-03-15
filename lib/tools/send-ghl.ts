@@ -82,6 +82,7 @@ export async function sendToGhl(
     const slug = meta['slug'] || ''
     const description = meta['seo_description'] || ''
     const imageUrl = meta['image_url'] || await getFileUrl('hero_image.jpg')
+    const imageAltText = meta['image_alt'] || title
 
     onLog(`Publishing to GHL: "${title}"`)
 
@@ -95,7 +96,7 @@ export async function sendToGhl(
       status: 'DRAFT',
       description,
       ...(slug && { urlSlug: slug }),
-      ...(imageUrl && { imageUrl }),
+      ...(imageUrl && { imageUrl, imageAltText }),
     }
 
     const resp = await fetch('https://services.leadconnectorhq.com/blogs/posts', {
