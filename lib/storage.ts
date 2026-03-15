@@ -1,5 +1,7 @@
 import { put, list } from '@vercel/blob'
-import { kv } from '@vercel/kv'
+import { Redis } from '@upstash/redis'
+
+const redis = Redis.fromEnv()
 
 // ── Vercel Blob (file storage) ─────────────────────────────────────────────
 
@@ -46,11 +48,11 @@ export async function getFileUrl(path: string): Promise<string> {
 // ── Vercel KV (config + published keywords) ────────────────────────────────
 
 export async function getConfig(key: string): Promise<string> {
-  return (await kv.get<string>(`config:${key}`)) || ''
+  return (await redis.get<string>(`config:${key}`)) || ''
 }
 
 export async function setConfig(key: string, value: string): Promise<void> {
-  await kv.set(`config:${key}`, value)
+  await redis.set(`config:${key}`, value)
 }
 
 export type PublishedKeyword = {
@@ -58,11 +60,11 @@ export type PublishedKeyword = {
 }
 
 export async function getPublishedKeywords(): Promise<PublishedKeyword[]> {
-  return (await kv.get<PublishedKeyword[]>('published_keywords')) || []
+  return (await redis.get<PublishedKeyword[]>('published_keywords')) || []
 }
 
 export async function addPublishedKeyword(entry: PublishedKeyword): Promise<void> {
   const existing = await getPublishedKeywords()
   if (existing.some(k => k.keyword.toLowerCase() === entry.keyword.toLowerCase())) return
-  await kv.set('published_keywords', [...existing, entry])
+  await redis.set('published_keywords', [...existing, entry])
 }
