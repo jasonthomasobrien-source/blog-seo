@@ -55,12 +55,11 @@ async function fetchGhlPosts(): Promise<GhlFetchResult> {
     return list.map(p => String(p.title || p.name || '')).filter(Boolean)
   }
 
-  // Try all meaningful URL patterns — no filter, then each status
+  // Try all meaningful URL patterns — no filter first, then each status (including SCHEDULED)
   const urlPatterns = [
-    // No status filter — should return everything
     `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100`,
-    // Status-filtered attempts
     `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=PUBLISHED`,
+    `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=SCHEDULED`,
     `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=DRAFT`,
     `https://services.leadconnectorhq.com/blogs/posts?locationId=${locationId}&blogId=${blogId}&limit=100&status=ACTIVE`,
   ]
@@ -70,9 +69,14 @@ async function fetchGhlPosts(): Promise<GhlFetchResult> {
     try {
       attempted++
       const resp = await fetch(url, { headers })
-      if (!resp.ok) continue
+      if (!resp.ok) {
+        console.log(`[suggest-topics] GHL API HTTP ${resp.status} for: ${url}`)
+        continue
+      }
       const data = await resp.json()
+      console.log(`[suggest-topics] GHL API 200 — keys: ${Object.keys(data as object).join(', ')}`)
       const found = extractTitles(data)
+      console.log(`[suggest-topics] Found ${found.length} titles from this request`)
       for (const t of found) {
         if (!titles.includes(t)) titles.push(t)
       }
@@ -81,7 +85,6 @@ async function fetchGhlPosts(): Promise<GhlFetchResult> {
       const d = data as Record<string, unknown>
       const total = Number(d.total ?? d.count ?? 0)
       if (total > 100 && titles.length < total) {
-        // Fetch additional pages
         for (let offset = 100; offset < Math.min(total, 500); offset += 100) {
           try {
             const pageResp = await fetch(`${url}&offset=${offset}`, { headers })
@@ -93,11 +96,12 @@ async function fetchGhlPosts(): Promise<GhlFetchResult> {
           } catch { break }
         }
       }
-    } catch {
-      // continue to next pattern
+    } catch (e) {
+      console.log(`[suggest-topics] GHL fetch exception: ${e}`)
     }
   }
 
+  console.log(`[suggest-topics] Total GHL titles found across all attempts: ${titles.length}`)
   return { titles, fetchedCount: titles.length, attempted }
 }
 

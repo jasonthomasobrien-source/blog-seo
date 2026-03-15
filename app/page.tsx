@@ -97,6 +97,7 @@ export default function Dashboard() {
   const [topicsLoading, setSuggestLoading] = useState(false)
   const [topicsError, setTopicsError] = useState<string>('')
   const [topicsLoaded, setTopicsLoaded] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<string>('')
 
   // Topic & keyword inputs
   const [topicValue, setTopicValue] = useState('')
@@ -529,6 +530,29 @@ export default function Dashboard() {
     appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
   }
 
+  // ── Sync Posts from GHL ────────────────────────────────────────────────────
+  async function syncPostsFromGhl() {
+    if (activeTask) return
+    setSyncStatus('Syncing…')
+    try {
+      const r = await fetch('/api/sync-posts', { method: 'POST' })
+      const data = await r.json()
+      if (data.error) {
+        setSyncStatus(`Error: ${data.error}`)
+      } else {
+        setSyncStatus(`Synced: ${data.ghl_posts_found} GHL posts found, ${data.added_to_redis} new`)
+        appendLog(`✓ Sync: ${data.ghl_posts_found} GHL posts found, ${data.added_to_redis} added to exclusion list`, 'ok')
+        if (data.debug) {
+          for (const line of data.debug) appendLog(`  GHL API: ${line}`, 'info')
+        }
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      setSyncStatus(`Error: ${msg}`)
+    }
+    setTimeout(() => setSyncStatus(''), 8000)
+  }
+
   // ── Mark Published ─────────────────────────────────────────────────────────
   async function markPublished() {
     try {
@@ -594,17 +618,27 @@ export default function Dashboard() {
                 </p>
               )}
             </div>
-            <button
-              className="btn btn-gold btn-sm"
-              id="btn-suggest"
-              onClick={handleSuggestTopics}
-              disabled={running || topicsLoading}
-              style={{ marginLeft: 'auto', flexShrink: 0 }}
-            >
-              {topicsLoading
-                ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Generating…</>
-                : '✦ Suggest Topics'}
-            </button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
+              {syncStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{syncStatus}</span>}
+              <button
+                className="btn btn-outline btn-sm"
+                onClick={syncPostsFromGhl}
+                disabled={running || topicsLoading}
+                title="Import all existing GHL posts into the exclusion list"
+              >
+                ↻ Sync from GHL
+              </button>
+              <button
+                className="btn btn-gold btn-sm"
+                id="btn-suggest"
+                onClick={handleSuggestTopics}
+                disabled={running || topicsLoading}
+              >
+                {topicsLoading
+                  ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Generating…</>
+                  : '✦ Suggest Topics'}
+              </button>
+            </div>
           </div>
           <div className="topics-body">
             {topicsLoaded && suggestedTopics.length > 0 ? (

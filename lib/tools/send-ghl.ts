@@ -1,4 +1,4 @@
-import { readFile, getFileUrl } from '../storage'
+import { readFile, getFileUrl, addPublishedKeyword } from '../storage'
 
 // ── Category helpers ─────────────────────────────────────────────────────────
 
@@ -209,6 +209,23 @@ export async function sendToGhl(
 
     onLog(`✓ Published to GHL as draft${postUrl ? `: ${postUrl}` : ''}`)
     onLog('Open GHL → Blogs to review and publish.')
+
+    // Auto-save to Redis so topic suggestions exclude this post going forward
+    const keyword = meta['keyword'] || ''
+    if (keyword || title) {
+      try {
+        await addPublishedKeyword({
+          keyword: keyword || title.toLowerCase(),
+          title,
+          url: postUrl || '',
+          date: new Date().toISOString().split('T')[0],
+          cluster: cluster || 'community-guides',
+        })
+        onLog(`✓ Saved "${title}" to published keywords list.`)
+      } catch {
+        // non-fatal — don't fail the publish
+      }
+    }
 
     return { success: true, postUrl }
   } catch (e: unknown) {
