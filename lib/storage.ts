@@ -24,12 +24,12 @@ export async function readFileBytes(path: string): Promise<Buffer | null> {
 }
 
 export async function writeFile(path: string, content: string): Promise<string> {
-  const { url } = await put(path, content, { access: 'public', addRandomSuffix: false })
+  const { url } = await put(path, content, { access: 'private', addRandomSuffix: false })
   return url
 }
 
 export async function writeFileBytes(path: string, buffer: Buffer, contentType: string): Promise<string> {
-  const { url } = await put(path, buffer, { access: 'public', addRandomSuffix: false, contentType })
+  const { url } = await put(path, buffer, { access: 'private', addRandomSuffix: false, contentType })
   return url
 }
 
