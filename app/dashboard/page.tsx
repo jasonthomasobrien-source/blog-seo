@@ -81,6 +81,7 @@ function classForLine(line: string): string {
 }
 
 export default function Dashboard() {
+  const [isDemo, setIsDemo] = useState(false)
   const [logLines, setLogLines] = useState<LogLine[]>([{ text: 'Ready. Suggest topics above, or set a topic and run Step 1.', cls: 'info' }])
   const [consoleBadge, setConsoleBadge] = useState<string>('')
   const [consoleStatus, setConsoleStatus] = useState<string>('Idle')
@@ -165,6 +166,9 @@ export default function Dashboard() {
 
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
+    fetch('/api/auth/session').then(r => r.json()).then(d => {
+      if (d.type === 'demo') setIsDemo(true)
+    }).catch(() => {})
     loadTopic()
     loadDraft()
     loadSeoFields()
@@ -625,6 +629,21 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Demo banner */}
+      {isDemo && (
+        <div style={{
+          background: '#c8a96e', color: '#1a2e44',
+          padding: '9px 28px', display: 'flex', alignItems: 'center',
+          gap: '12px', fontSize: '13px', fontWeight: 600,
+        }}>
+          <span>👀 Demo Mode</span>
+          <span style={{ fontWeight: 400 }}>You can explore all features. Publishing to GHL is disabled in demo mode.</span>
+          <a href="/#pricing" style={{ marginLeft: 'auto', color: '#1a2e44', fontWeight: 700, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+            Get Full Access →
+          </a>
+        </div>
+      )}
+
       {/* Status bar */}
       <div className="status-bar">
         <span className="status-label">Files:</span>
@@ -922,24 +941,35 @@ export default function Dashboard() {
               <hr className="divider" />
 
               {/* Publish */}
-              <button
-                className="btn btn-success btn-full"
-                id="btn-publish"
-                onClick={() => runPhase('publish', 'Publish to GHL')}
-                disabled={running}
-              >
-                {running && runningBtn === 'Publish to GHL'
-                  ? <><span className="spinner"></span> Running…</>
-                  : 'Publish to GHL'}
-              </button>
-              <button
-                className="btn btn-outline btn-sm btn-full"
-                id="btn-mark"
-                onClick={markPublished}
-                disabled={running}
-              >
-                ✓ Mark Keyword as Published
-              </button>
+              {isDemo ? (
+                <div style={{ background: '#f7f8fa', border: '1.5px solid #dde1e7', borderRadius: '7px', padding: '14px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '13px', color: '#8492a6', marginBottom: '8px' }}>Publishing is disabled in demo mode.</p>
+                  <a href="/#pricing" className="btn btn-gold btn-sm" style={{ display: 'inline-flex', textDecoration: 'none' }}>
+                    Get Full Access →
+                  </a>
+                </div>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-success btn-full"
+                    id="btn-publish"
+                    onClick={() => runPhase('publish', 'Publish to GHL')}
+                    disabled={running}
+                  >
+                    {running && runningBtn === 'Publish to GHL'
+                      ? <><span className="spinner"></span> Running…</>
+                      : 'Publish to GHL'}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm btn-full"
+                    id="btn-mark"
+                    onClick={markPublished}
+                    disabled={running}
+                  >
+                    ✓ Mark Keyword as Published
+                  </button>
+                </>
+              )}
             </div>
           </div>
 

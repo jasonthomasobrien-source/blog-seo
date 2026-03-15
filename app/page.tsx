@@ -143,8 +143,8 @@ export default function LandingPage() {
           >
             Go to Dashboard →
           </Link>
-          <a
-            href="#how-it-works"
+          <Link
+            href="/login#demo"
             style={{
               padding: '15px 36px', background: 'transparent',
               border: '1.5px solid rgba(255,255,255,0.2)', color: '#fff',
@@ -152,8 +152,8 @@ export default function LandingPage() {
               textDecoration: 'none', display: 'inline-block',
             }}
           >
-            See How It Works
-          </a>
+            👀 Try the Demo
+          </Link>
         </div>
 
         {/* Stats row */}
