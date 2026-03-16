@@ -752,8 +752,8 @@ export default function Dashboard() {
             <button
               className="btn btn-outline btn-sm"
               style={{
-                borderColor: showProfileMenu ? '#c8a96e' : '#3a4a5a',
-                color: showProfileMenu ? '#c8a96e' : '#c8d8e8',
+                borderColor: showProfileMenu ? '#f59e0b' : '#2a3d57',
+                color: showProfileMenu ? '#f59e0b' : '#94a3b8',
                 width: '34px', height: '34px', padding: 0,
                 borderRadius: '50%', fontSize: '15px',
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -768,7 +768,7 @@ export default function Dashboard() {
             {showProfileMenu && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                background: '#152538', border: '1px solid #2a3e54',
+                background: '#0b1117', border: '1px solid #1e2d45',
                 borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                 minWidth: '170px', zIndex: 200, overflow: 'hidden',
               }}>
@@ -776,10 +776,10 @@ export default function Dashboard() {
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     padding: '10px 16px', background: 'none', border: 'none',
-                    color: '#e8edf2', fontSize: '13px', cursor: 'pointer',
-                    borderBottom: '1px solid #2a3e54',
+                    color: '#f1f5f9', fontSize: '13px', cursor: 'pointer',
+                    borderBottom: '1px solid #1e2d45',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#1a2e44')}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#162032')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   onClick={() => { setShowSettingsModal(true); setShowProfileMenu(false); loadSettings(); loadServiceArea() }}
                 >
@@ -789,12 +789,12 @@ export default function Dashboard() {
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     padding: '10px 16px', background: 'none', border: 'none',
-                    color: '#4a5a6a', fontSize: '13px', cursor: 'default',
-                    borderBottom: '1px solid #2a3e54',
+                    color: '#475569', fontSize: '13px', cursor: 'default',
+                    borderBottom: '1px solid #1e2d45',
                   }}
                   disabled
                 >
-                  💳 Billing <span style={{ fontSize: '10px', color: '#3a4a5a' }}>coming soon</span>
+                  💳 Billing <span style={{ fontSize: '10px', color: '#2a3d57' }}>coming soon</span>
                 </button>
                 <form action="/api/auth/logout" method="POST" style={{ margin: 0 }}>
                   <button
@@ -804,7 +804,7 @@ export default function Dashboard() {
                       padding: '10px 16px', background: 'none', border: 'none',
                       color: '#e07070', fontSize: '13px', cursor: 'pointer',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#1a2e44')}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#162032')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
                     ↪ Log Out
@@ -819,13 +819,13 @@ export default function Dashboard() {
       {/* Demo banner */}
       {isDemo && (
         <div style={{
-          background: '#c8a96e', color: '#1a2e44',
+          background: '#f59e0b', color: '#f1f5f9',
           padding: '9px 28px', display: 'flex', alignItems: 'center',
           gap: '12px', fontSize: '13px', fontWeight: 600,
         }}>
           <span>👀 Demo Mode</span>
           <span style={{ fontWeight: 400 }}>You can explore all features. Publishing to GHL is disabled in demo mode.</span>
-          <a href="/#pricing" style={{ marginLeft: 'auto', color: '#1a2e44', fontWeight: 700, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
+          <a href="/#pricing" style={{ marginLeft: 'auto', color: '#f1f5f9', fontWeight: 700, textDecoration: 'underline', whiteSpace: 'nowrap' }}>
             Get Full Access →
           </a>
         </div>
@@ -857,7 +857,7 @@ export default function Dashboard() {
               <h2>SEO Topic Ideas</h2>
               <p>AI-generated topics ranked by search opportunity — click one to select it</p>
               {topicsDebug && (
-                <p style={{ fontSize: '11px', color: '#8492a6', marginTop: '2px' }}>
+                <p style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
                   Excluded {topicsDebug.total_excluded ?? 0} existing posts
                   ({topicsDebug.site_scraped ?? 0} scraped from site · {topicsDebug.redis_keywords ?? 0} tracked · {topicsDebug.ghl_posts_found ?? 0} from GHL) ·
                   {topicsDebug.uncovered_cities ?? 0} cities uncovered
@@ -867,7 +867,7 @@ export default function Dashboard() {
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
               <button
                 className="btn btn-outline btn-sm"
-                style={{ borderColor: '#2a3e54', color: showServiceArea ? '#c8a96e' : '#8492a6' }}
+                style={{ borderColor: '#1e2d45', color: showServiceArea ? '#f59e0b' : '#64748b' }}
                 onClick={() => setShowServiceArea(v => !v)}
                 title="Configure service area cities"
               >
@@ -875,7 +875,7 @@ export default function Dashboard() {
               </button>
               <button
                 className="btn btn-outline btn-sm"
-                style={{ borderColor: '#c8a96e', color: '#c8a96e' }}
+                style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
                 onClick={() => setShowCustomTopic(v => !v)}
                 disabled={running}
               >
@@ -888,38 +888,38 @@ export default function Dashboard() {
                 disabled={running || topicsLoading}
               >
                 {topicsLoading
-                  ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Generating…</>
+                  ? <><span className="spinner" style={{ borderTopColor: '#0b1117' }}></span> Generating…</>
                   : '✦ Suggest Topics'}
               </button>
             </div>
           </div>
           {showCustomTopic && (
-            <div style={{ padding: '16px 18px', borderBottom: '1px solid #2a3a4a', background: '#0d1f2d' }}>
-              <p style={{ fontSize: '12px', color: '#c8a96e', marginBottom: '12px', fontWeight: 600 }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid #1e2d45', background: '#0b1117' }}>
+              <p style={{ fontSize: '12px', color: '#f59e0b', marginBottom: '12px', fontWeight: 600 }}>
                 Have a specific topic in mind? Type it in and the AI will research and write it for you.
               </p>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
                 <div style={{ flex: '2', minWidth: '240px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#8492a6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Topic / Title</label>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Topic / Title</label>
                   <input
                     type="text"
                     placeholder="e.g. Best Neighborhoods in Otsego Michigan for Families"
                     value={customTopicValue}
                     onChange={e => setCustomTopicValue(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && customTopicValue.trim()) runCustomTopic(customTopicValue, customKeywordValue) }}
-                    style={{ width: '100%', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: '#162032', color: '#f1f5f9', border: '1px solid #1e2d45', borderRadius: '6px', padding: '8px 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                     autoFocus
                   />
                 </div>
                 <div style={{ flex: '1', minWidth: '180px' }}>
-                  <label style={{ display: 'block', fontSize: '11px', color: '#8492a6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Primary Keyword <span style={{ color: '#4a5a6a' }}>(optional)</span></label>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Primary Keyword <span style={{ color: '#475569' }}>(optional)</span></label>
                   <input
                     type="text"
                     placeholder="e.g. otsego michigan neighborhoods"
                     value={customKeywordValue}
                     onChange={e => setCustomKeywordValue(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && customTopicValue.trim()) runCustomTopic(customTopicValue, customKeywordValue) }}
-                    style={{ width: '100%', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' }}
+                    style={{ width: '100%', background: '#162032', color: '#f1f5f9', border: '1px solid #1e2d45', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               </div>
@@ -929,23 +929,23 @@ export default function Dashboard() {
                   onClick={() => runCustomTopic(customTopicValue, customKeywordValue)}
                   disabled={running || !customTopicValue.trim()}
                 >
-                  {running ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Running…</> : '▶ Research & Write This Post'}
+                  {running ? <><span className="spinner" style={{ borderTopColor: '#0b1117' }}></span> Running…</> : '▶ Research & Write This Post'}
                 </button>
-                <button className="btn btn-outline btn-sm" style={{ borderColor: '#3a4a5a', color: '#8492a6' }} onClick={() => { setShowCustomTopic(false); setCustomTopicValue(''); setCustomKeywordValue('') }}>Cancel</button>
+                <button className="btn btn-outline btn-sm" style={{ borderColor: '#2a3d57', color: '#64748b' }} onClick={() => { setShowCustomTopic(false); setCustomTopicValue(''); setCustomKeywordValue('') }}>Cancel</button>
               </div>
             </div>
           )}
           {showServiceArea && (
-            <div style={{ padding: '16px 18px', borderBottom: '1px solid #2a3e54', background: '#0f1e2d' }}>
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid #1e2d45', background: '#0b1117' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <p style={{ fontSize: '12px', color: '#c8a96e', fontWeight: 600, marginBottom: '3px' }}>
+                  <p style={{ fontSize: '12px', color: '#f59e0b', fontWeight: 600, marginBottom: '3px' }}>
                     Service Area Configuration
                   </p>
-                  <p style={{ fontSize: '11px', color: '#8492a6' }}>
+                  <p style={{ fontSize: '11px', color: '#64748b' }}>
                     Cities used for gap analysis when suggesting topics.
                     {topicsDebug && (
-                      <> &nbsp;·&nbsp; <strong style={{ color: '#c8a96e' }}>{topicsDebug.uncovered_cities ?? 0} uncovered</strong> of {serviceArea.tier1.length + serviceArea.tier2.length + serviceArea.tier3.length} total cities</>
+                      <> &nbsp;·&nbsp; <strong style={{ color: '#f59e0b' }}>{topicsDebug.uncovered_cities ?? 0} uncovered</strong> of {serviceArea.tier1.length + serviceArea.tier2.length + serviceArea.tier3.length} total cities</>
                     )}
                   </p>
                 </div>
@@ -957,7 +957,7 @@ export default function Dashboard() {
                     disabled={running || serviceAreaSaving}
                   >
                     {serviceAreaSaving
-                      ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Saving…</>
+                      ? <><span className="spinner" style={{ borderTopColor: '#0b1117' }}></span> Saving…</>
                       : '💾 Save Coverage Area'}
                   </button>
                 </div>
@@ -973,8 +973,8 @@ export default function Dashboard() {
 
                 return (
                   <div key={tier} style={{ marginBottom: ti < 2 ? '18px' : 0 }}>
-                    <div style={{ fontSize: '11px', color: '#8492a6', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' }}>
-                      {tierLabels[ti]} <span style={{ color: '#4a5a6a', fontWeight: 400 }}>({serviceArea[tier].length})</span>
+                    <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' }}>
+                      {tierLabels[ti]} <span style={{ color: '#475569', fontWeight: 400 }}>({serviceArea[tier].length})</span>
                     </div>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                       {serviceArea[tier].map(city => (
@@ -1002,7 +1002,7 @@ export default function Dashboard() {
                         </span>
                       ))}
                       {serviceArea[tier].length === 0 && (
-                        <span style={{ fontSize: '11px', color: '#4a5a6a', fontStyle: 'italic' }}>No cities in this tier</span>
+                        <span style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic' }}>No cities in this tier</span>
                       )}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -1018,14 +1018,14 @@ export default function Dashboard() {
                           }
                         }}
                         style={{
-                          background: '#1a2e44', color: '#e8edf2',
-                          border: '1px solid #2a3e54', borderRadius: '6px',
+                          background: '#162032', color: '#f1f5f9',
+                          border: '1px solid #1e2d45', borderRadius: '6px',
                           padding: '5px 10px', fontSize: '12px', outline: 'none', width: '200px',
                         }}
                       />
                       <button
                         className="btn btn-outline btn-sm"
-                        style={{ borderColor: '#2a3e54', color: '#c8a96e' }}
+                        style={{ borderColor: '#1e2d45', color: '#f59e0b' }}
                         onClick={() => {
                           if (inputValues[ti].trim()) {
                             addCityToTier(tier, inputValues[ti])
@@ -1267,8 +1267,8 @@ export default function Dashboard() {
 
               {/* Publish */}
               {isDemo ? (
-                <div style={{ background: '#f7f8fa', border: '1.5px solid #dde1e7', borderRadius: '7px', padding: '14px', textAlign: 'center' }}>
-                  <p style={{ fontSize: '13px', color: '#8492a6', marginBottom: '8px' }}>Publishing is disabled in demo mode.</p>
+                <div style={{ background: '#0d1520', border: '1px solid #1e2d45', borderRadius: '8px', padding: '14px', textAlign: 'center' }}>
+                  <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}>Publishing is disabled in demo mode.</p>
                   <a href="/#pricing" className="btn btn-gold btn-sm" style={{ display: 'inline-flex', textDecoration: 'none' }}>
                     Get Full Access →
                   </a>
@@ -1303,8 +1303,8 @@ export default function Dashboard() {
         {/* SEO / Copy Fields */}
         <div className="seo-fields">
           <div className="seo-fields-header">
-            <div className="step-num" style={{ background: '#c8a96e' }}>4</div>
-            <div><h2 style={{ fontSize: '14px', fontWeight: 600 }}>Blog Fields</h2><p style={{ fontSize: '11px', color: '#c8a96e' }}>Copy into your CMS when publishing</p></div>
+            <div className="step-num" style={{ background: '#f59e0b' }}>4</div>
+            <div><h2 style={{ fontSize: '14px', fontWeight: 600 }}>Blog Fields</h2><p style={{ fontSize: '11px', color: '#f59e0b' }}>Copy into your CMS when publishing</p></div>
             <button
               className="btn btn-outline btn-sm"
               style={{ marginLeft: 'auto', borderColor: '#555', color: '#aaa' }}
@@ -1317,30 +1317,30 @@ export default function Dashboard() {
           <div className="seo-fields-grid">
             <div className="seo-field-cell">
               <div className="section-label" style={{ marginBottom: '6px' }}>Title (H1 / Page Title)</div>
-              <div id="seo-title" style={{ fontSize: '13px', fontWeight: 600, color: '#1a2e44', marginBottom: '8px', lineHeight: 1.4 }}>{seoTitle}</div>
+              <div id="seo-title" style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px', lineHeight: 1.4 }}>{seoTitle}</div>
               <button className="btn btn-outline btn-sm" onClick={e => copyField(seoTitle, e.currentTarget)}>Copy</button>
             </div>
             <div className="seo-field-cell">
               <div className="section-label" style={{ marginBottom: '6px' }}>URL Slug</div>
-              <div id="seo-slug" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#1a6b9e', marginBottom: '8px', wordBreak: 'break-all' }}>{seoSlug}</div>
+              <div id="seo-slug" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#60a5fa', marginBottom: '8px', wordBreak: 'break-all' }}>{seoSlug}</div>
               <button className="btn btn-outline btn-sm" onClick={e => copyField(seoSlug, e.currentTarget)}>Copy</button>
             </div>
             <div className="seo-field-cell" style={{ borderRight: 'none' }}>
               <div className="section-label" style={{ marginBottom: '6px' }}>Primary Keyword</div>
-              <div id="seo-keyword" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#1a2e44', marginBottom: '8px' }}>{seoKeyword}</div>
+              <div id="seo-keyword" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#f1f5f9', marginBottom: '8px' }}>{seoKeyword}</div>
               <button className="btn btn-outline btn-sm" onClick={e => copyField(seoKeyword, e.currentTarget)}>Copy</button>
             </div>
           </div>
           <div className="seo-field-cell2">
             <div>
               <div className="section-label" style={{ marginBottom: '6px' }}>Meta Description (140–155 chars)</div>
-              <div id="seo-desc" style={{ fontSize: '12px', color: '#3a4a5a', marginBottom: '4px', lineHeight: 1.5 }}>{seoDesc}</div>
-              <div id="seo-desc-len" style={{ fontSize: '10px', color: '#8492a6', marginBottom: '6px' }}>{seoDescLen}</div>
+              <div id="seo-desc" style={{ fontSize: '12px', color: '#2a3d57', marginBottom: '4px', lineHeight: 1.5 }}>{seoDesc}</div>
+              <div id="seo-desc-len" style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px' }}>{seoDescLen}</div>
               <button className="btn btn-outline btn-sm" onClick={e => copyField(seoDesc, e.currentTarget)}>Copy</button>
             </div>
             <div>
               <div className="section-label" style={{ marginBottom: '6px' }}>Image Alt Text + Download</div>
-              <div id="seo-alt" style={{ fontSize: '12px', color: '#3a4a5a', marginBottom: '8px' }}>{seoAlt}</div>
+              <div id="seo-alt" style={{ fontSize: '12px', color: '#2a3d57', marginBottom: '8px' }}>{seoAlt}</div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button className="btn btn-outline btn-sm" onClick={e => copyField(seoAlt, e.currentTarget)}>Copy Alt Text</button>
                 <a className="btn btn-success btn-sm" href="/api/hero-image" download="hero_image.jpg">Download Image</a>
@@ -1389,17 +1389,17 @@ export default function Dashboard() {
           onClick={e => { if (e.target === e.currentTarget) setShowSettingsModal(false) }}
         >
           <div style={{
-            background: '#152538', border: '1px solid #2a3e54', borderRadius: '12px',
+            background: '#0b1117', border: '1px solid #1e2d45', borderRadius: '12px',
             width: '100%', maxWidth: '580px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
           }}>
             {/* Modal header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '20px 24px', borderBottom: '1px solid #2a3e54',
+              padding: '20px 24px', borderBottom: '1px solid #1e2d45',
             }}>
               <div>
-                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#e8edf2', margin: 0 }}>Settings</h2>
-                <p style={{ fontSize: '12px', color: '#8492a6', margin: '3px 0 0' }}>Configure your integrations and service area</p>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Settings</h2>
+                <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0' }}>Configure your integrations and service area</p>
               </div>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                 {settingsSaved && <span style={{ fontSize: '12px', color: '#4caf50', fontWeight: 600 }}>✓ Saved!</span>}
@@ -1408,10 +1408,10 @@ export default function Dashboard() {
                   onClick={saveSettings}
                   disabled={settingsSaving}
                 >
-                  {settingsSaving ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Saving…</> : '💾 Save'}
+                  {settingsSaving ? <><span className="spinner" style={{ borderTopColor: '#0b1117' }}></span> Saving…</> : '💾 Save'}
                 </button>
                 <button
-                  style={{ background: 'none', border: 'none', color: '#8492a6', fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '2px 4px' }}
+                  style={{ background: 'none', border: 'none', color: '#64748b', fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '2px 4px' }}
                   onClick={() => setShowSettingsModal(false)}
                 >
                   ×
@@ -1423,7 +1423,7 @@ export default function Dashboard() {
 
               {/* ── GoHighLevel ── */}
               <div style={{ marginBottom: '28px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>⚡</span> GoHighLevel (GHL)
                 </div>
                 <SettingsField label="API Key" type={showGhlKey ? 'text' : 'password'} value={cfgGhlApiKey} onChange={setCfgGhlApiKey} placeholder="Bearer token from GHL" onToggle={() => setShowGhlKey(v => !v)} showToggle />
@@ -1433,7 +1433,7 @@ export default function Dashboard() {
 
               {/* ── Lofty ── */}
               <div style={{ marginBottom: '28px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>🏠</span> Lofty (Real Broker / eXp)
                 </div>
                 <SettingsField label="API Key" type={showLoftyKey ? 'text' : 'password'} value={cfgLoftyApiKey} onChange={setCfgLoftyApiKey} placeholder="Lofty API token" onToggle={() => setShowLoftyKey(v => !v)} showToggle last />
@@ -1441,7 +1441,7 @@ export default function Dashboard() {
 
               {/* ── WordPress ── */}
               <div style={{ marginBottom: '28px' }}>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>📝</span> WordPress
                 </div>
                 <SettingsField label="Site URL" type="text" value={cfgWpSiteUrl} onChange={setCfgWpSiteUrl} placeholder="https://yoursite.com" />
@@ -1451,10 +1451,10 @@ export default function Dashboard() {
 
               {/* ── Service Area ── */}
               <div>
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>📍</span> Service Area
                 </div>
-                <p style={{ fontSize: '11px', color: '#8492a6', marginBottom: '16px' }}>
+                <p style={{ fontSize: '11px', color: '#64748b', marginBottom: '16px' }}>
                   Cities used for gap analysis when suggesting topics.
                 </p>
                 {(['tier1', 'tier2', 'tier3'] as const).map((tier, ti) => {
@@ -1466,8 +1466,8 @@ export default function Dashboard() {
 
                   return (
                     <div key={tier} style={{ marginBottom: ti < 2 ? '16px' : 0 }}>
-                      <div style={{ fontSize: '11px', color: '#8492a6', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' }}>
-                        {tierLabels[ti]} <span style={{ color: '#4a5a6a', fontWeight: 400 }}>({serviceArea[tier].length})</span>
+                      <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' }}>
+                        {tierLabels[ti]} <span style={{ color: '#475569', fontWeight: 400 }}>({serviceArea[tier].length})</span>
                       </div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
                         {serviceArea[tier].map(city => (
@@ -1481,7 +1481,7 @@ export default function Dashboard() {
                             <button onClick={() => removeCityFromTier(tier, city)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: chipColors[ti], fontSize: '13px', lineHeight: 1, padding: '0 1px', opacity: 0.7 }}>×</button>
                           </span>
                         ))}
-                        {serviceArea[tier].length === 0 && <span style={{ fontSize: '11px', color: '#4a5a6a', fontStyle: 'italic' }}>No cities</span>}
+                        {serviceArea[tier].length === 0 && <span style={{ fontSize: '11px', color: '#475569', fontStyle: 'italic' }}>No cities</span>}
                       </div>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <input
@@ -1490,9 +1490,9 @@ export default function Dashboard() {
                           value={inputValues[ti]}
                           onChange={e => inputSetters[ti](e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter' && inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}
-                          style={{ background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3e54', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none', flex: 1 }}
+                          style={{ background: '#162032', color: '#f1f5f9', border: '1px solid #1e2d45', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none', flex: 1 }}
                         />
-                        <button className="btn btn-outline btn-sm" style={{ borderColor: '#2a3e54', color: '#c8a96e' }} onClick={() => { if (inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}>+ Add</button>
+                        <button className="btn btn-outline btn-sm" style={{ borderColor: '#1e2d45', color: '#f59e0b' }} onClick={() => { if (inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}>+ Add</button>
                       </div>
                     </div>
                   )
@@ -1522,7 +1522,7 @@ function SettingsField({
 }) {
   return (
     <div style={{ marginBottom: last ? 0 : '12px' }}>
-      <label style={{ display: 'block', fontSize: '11px', color: '#8492a6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</label>
+      <label style={{ display: 'block', fontSize: '11px', color: '#64748b', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</label>
       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
         <input
           type={type}
@@ -1530,8 +1530,8 @@ function SettingsField({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           style={{
-            flex: 1, background: '#1a2e44', color: '#e8edf2',
-            border: '1px solid #2a3e54', borderRadius: '6px',
+            flex: 1, background: '#162032', color: '#f1f5f9',
+            border: '1px solid #1e2d45', borderRadius: '6px',
             padding: '7px 10px', fontSize: '12px', fontFamily: 'monospace',
             outline: 'none',
           }}
@@ -1540,7 +1540,7 @@ function SettingsField({
           <button
             type="button"
             onClick={onToggle}
-            style={{ background: 'none', border: '1px solid #2a3e54', borderRadius: '6px', color: '#8492a6', cursor: 'pointer', padding: '6px 8px', fontSize: '13px' }}
+            style={{ background: 'none', border: '1px solid #1e2d45', borderRadius: '6px', color: '#64748b', cursor: 'pointer', padding: '6px 8px', fontSize: '13px' }}
             title={type === 'password' ? 'Show' : 'Hide'}
           >
             {type === 'password' ? '👁' : '🙈'}
