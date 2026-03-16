@@ -1,4 +1,4 @@
-import { readFile, getFileUrl, addPublishedKeyword } from '../storage'
+import { readFile, getFileUrl, addPublishedKeyword, getConfig } from '../storage'
 
 // ── Category helpers ─────────────────────────────────────────────────────────
 
@@ -133,13 +133,13 @@ function inline(text: string): string {
 export async function sendToGhl(
   onLog: (line: string) => void
 ): Promise<{ success: boolean; postUrl?: string; error?: string }> {
-  const apiKey = process.env.GHL_API_KEY || ''
-  const locationId = process.env.GHL_LOCATION_ID || ''
-  const blogId = process.env.GHL_BLOG_ID || ''
+  const apiKey = process.env.GHL_API_KEY || await getConfig('ghl_api_key')
+  const locationId = process.env.GHL_LOCATION_ID || await getConfig('ghl_location_id')
+  const blogId = process.env.GHL_BLOG_ID || await getConfig('ghl_blog_id')
 
-  if (!apiKey) return { success: false, error: 'GHL_API_KEY not set in environment variables.' }
-  if (!locationId) return { success: false, error: 'GHL_LOCATION_ID not set in environment variables.' }
-  if (!blogId) return { success: false, error: 'GHL_BLOG_ID not set in environment variables.' }
+  if (!apiKey) return { success: false, error: 'GHL API Key not set. Add it in Settings → GoHighLevel.' }
+  if (!locationId) return { success: false, error: 'GHL Location ID not set. Add it in Settings → GoHighLevel.' }
+  if (!blogId) return { success: false, error: 'GHL Blog ID not set. Add it in Settings → GoHighLevel.' }
 
   try {
     onLog('Reading draft.md from storage…')

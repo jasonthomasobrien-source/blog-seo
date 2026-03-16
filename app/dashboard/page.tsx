@@ -113,6 +113,22 @@ export default function Dashboard() {
   const [newCityTier2, setNewCityTier2] = useState('')
   const [newCityTier3, setNewCityTier3] = useState('')
 
+  // Profile dropdown + settings modal
+  const [showProfileMenu, setShowProfileMenu] = useState(false)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsSaved, setSettingsSaved] = useState(false)
+  const [cfgGhlApiKey, setCfgGhlApiKey] = useState('')
+  const [cfgGhlLocationId, setCfgGhlLocationId] = useState('')
+  const [cfgGhlBlogId, setCfgGhlBlogId] = useState('')
+  const [cfgLoftyApiKey, setCfgLoftyApiKey] = useState('')
+  const [cfgWpSiteUrl, setCfgWpSiteUrl] = useState('')
+  const [cfgWpUsername, setCfgWpUsername] = useState('')
+  const [cfgWpAppPassword, setCfgWpAppPassword] = useState('')
+  const [showGhlKey, setShowGhlKey] = useState(false)
+  const [showLoftyKey, setShowLoftyKey] = useState(false)
+  const [showWpPassword, setShowWpPassword] = useState(false)
+
   // Topic & keyword inputs
   const [topicValue, setTopicValue] = useState('')
   const [keywordValue, setKeywordValue] = useState('')
@@ -172,6 +188,17 @@ export default function Dashboard() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   })
+
+  // ── Close profile menu when clicking outside ────────────────────────────────
+  useEffect(() => {
+    if (!showProfileMenu) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Element
+      if (!target.closest('#profile-menu-wrapper')) setShowProfileMenu(false)
+    }
+    window.addEventListener('mousedown', handler)
+    return () => window.removeEventListener('mousedown', handler)
+  }, [showProfileMenu])
 
   // ── Init ───────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -295,6 +322,56 @@ export default function Dashboard() {
       ...prev,
       [tier]: prev[tier].filter(c => c !== city),
     }))
+  }
+
+  // ── Integration Settings ───────────────────────────────────────────────────
+  async function loadSettings() {
+    try {
+      const r = await fetch('/api/settings')
+      const d = await r.json()
+      setCfgGhlApiKey(d.ghl_api_key || '')
+      setCfgGhlLocationId(d.ghl_location_id || '')
+      setCfgGhlBlogId(d.ghl_blog_id || '')
+      setCfgLoftyApiKey(d.lofty_api_key || '')
+      setCfgWpSiteUrl(d.wp_site_url || '')
+      setCfgWpUsername(d.wp_username || '')
+      setCfgWpAppPassword(d.wp_app_password || '')
+    } catch {
+      // ignore
+    }
+  }
+
+  async function saveSettings() {
+    setSettingsSaving(true)
+    try {
+      const r = await fetch('/api/settings', {
+        method: 'POST',
+        body: JSON.stringify({
+          ghl_api_key: cfgGhlApiKey,
+          ghl_location_id: cfgGhlLocationId,
+          ghl_blog_id: cfgGhlBlogId,
+          lofty_api_key: cfgLoftyApiKey,
+          wp_site_url: cfgWpSiteUrl,
+          wp_username: cfgWpUsername,
+          wp_app_password: cfgWpAppPassword,
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const d = await r.json()
+      if (d.error) {
+        appendLog(`✗ Settings save failed: ${d.error}`, 'err')
+      } else {
+        setSettingsSaved(true)
+        setTimeout(() => setSettingsSaved(false), 2000)
+        // Also save service area changes
+        await saveServiceArea()
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      appendLog(`✗ ${msg}`, 'err')
+    } finally {
+      setSettingsSaving(false)
+    }
   }
 
   // ── Draft ──────────────────────────────────────────────────────────────────
@@ -670,15 +747,72 @@ export default function Dashboard() {
           >
             ↻ Refresh
           </button>
-          <form action="/api/auth/logout" method="POST">
+          {/* Profile dropdown */}
+          <div id="profile-menu-wrapper" style={{ position: 'relative' }}>
             <button
-              type="submit"
               className="btn btn-outline btn-sm"
-              style={{ borderColor: '#555', color: '#999' }}
+              style={{
+                borderColor: showProfileMenu ? '#c8a96e' : '#3a4a5a',
+                color: showProfileMenu ? '#c8a96e' : '#c8d8e8',
+                width: '34px', height: '34px', padding: 0,
+                borderRadius: '50%', fontSize: '15px',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              onClick={() => {
+                setShowProfileMenu(v => !v)
+              }}
+              title="Account & Settings"
             >
-              Log Out
+              ⊙
             </button>
-          </form>
+            {showProfileMenu && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                background: '#152538', border: '1px solid #2a3e54',
+                borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                minWidth: '170px', zIndex: 200, overflow: 'hidden',
+              }}>
+                <button
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '10px 16px', background: 'none', border: 'none',
+                    color: '#e8edf2', fontSize: '13px', cursor: 'pointer',
+                    borderBottom: '1px solid #2a3e54',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#1a2e44')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  onClick={() => { setShowSettingsModal(true); setShowProfileMenu(false); loadSettings(); loadServiceArea() }}
+                >
+                  ⚙ Settings
+                </button>
+                <button
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    padding: '10px 16px', background: 'none', border: 'none',
+                    color: '#4a5a6a', fontSize: '13px', cursor: 'default',
+                    borderBottom: '1px solid #2a3e54',
+                  }}
+                  disabled
+                >
+                  💳 Billing <span style={{ fontSize: '10px', color: '#3a4a5a' }}>coming soon</span>
+                </button>
+                <form action="/api/auth/logout" method="POST" style={{ margin: 0 }}>
+                  <button
+                    type="submit"
+                    style={{
+                      display: 'block', width: '100%', textAlign: 'left',
+                      padding: '10px 16px', background: 'none', border: 'none',
+                      color: '#e07070', fontSize: '13px', cursor: 'pointer',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#1a2e44')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    ↪ Log Out
+                  </button>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1243,6 +1377,176 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div
+          style={{
+            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)',
+            zIndex: 500, display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+            padding: '40px 16px', overflowY: 'auto',
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowSettingsModal(false) }}
+        >
+          <div style={{
+            background: '#152538', border: '1px solid #2a3e54', borderRadius: '12px',
+            width: '100%', maxWidth: '580px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+          }}>
+            {/* Modal header */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '20px 24px', borderBottom: '1px solid #2a3e54',
+            }}>
+              <div>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#e8edf2', margin: 0 }}>Settings</h2>
+                <p style={{ fontSize: '12px', color: '#8492a6', margin: '3px 0 0' }}>Configure your integrations and service area</p>
+              </div>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                {settingsSaved && <span style={{ fontSize: '12px', color: '#4caf50', fontWeight: 600 }}>✓ Saved!</span>}
+                <button
+                  className="btn btn-gold btn-sm"
+                  onClick={saveSettings}
+                  disabled={settingsSaving}
+                >
+                  {settingsSaving ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Saving…</> : '💾 Save'}
+                </button>
+                <button
+                  style={{ background: 'none', border: 'none', color: '#8492a6', fontSize: '20px', cursor: 'pointer', lineHeight: 1, padding: '2px 4px' }}
+                  onClick={() => setShowSettingsModal(false)}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+
+              {/* ── GoHighLevel ── */}
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>⚡</span> GoHighLevel (GHL)
+                </div>
+                <SettingsField label="API Key" type={showGhlKey ? 'text' : 'password'} value={cfgGhlApiKey} onChange={setCfgGhlApiKey} placeholder="Bearer token from GHL" onToggle={() => setShowGhlKey(v => !v)} showToggle />
+                <SettingsField label="Location ID" type="text" value={cfgGhlLocationId} onChange={setCfgGhlLocationId} placeholder="e.g. abc123XYZ" />
+                <SettingsField label="Blog ID" type="text" value={cfgGhlBlogId} onChange={setCfgGhlBlogId} placeholder="e.g. xyz789" last />
+              </div>
+
+              {/* ── Lofty ── */}
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>🏠</span> Lofty (Real Broker / eXp)
+                </div>
+                <SettingsField label="API Key" type={showLoftyKey ? 'text' : 'password'} value={cfgLoftyApiKey} onChange={setCfgLoftyApiKey} placeholder="Lofty API token" onToggle={() => setShowLoftyKey(v => !v)} showToggle last />
+              </div>
+
+              {/* ── WordPress ── */}
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>📝</span> WordPress
+                </div>
+                <SettingsField label="Site URL" type="text" value={cfgWpSiteUrl} onChange={setCfgWpSiteUrl} placeholder="https://yoursite.com" />
+                <SettingsField label="Username" type="text" value={cfgWpUsername} onChange={setCfgWpUsername} placeholder="WordPress username" />
+                <SettingsField label="Application Password" type={showWpPassword ? 'text' : 'password'} value={cfgWpAppPassword} onChange={setCfgWpAppPassword} placeholder="xxxx xxxx xxxx xxxx" onToggle={() => setShowWpPassword(v => !v)} showToggle last />
+              </div>
+
+              {/* ── Service Area ── */}
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>📍</span> Service Area
+                </div>
+                <p style={{ fontSize: '11px', color: '#8492a6', marginBottom: '16px' }}>
+                  Cities used for gap analysis when suggesting topics.
+                </p>
+                {(['tier1', 'tier2', 'tier3'] as const).map((tier, ti) => {
+                  const tierLabels = ['Tier 1 — Primary Markets', 'Tier 2 — Secondary', 'Tier 3 — Extended']
+                  const inputValues = [newCityTier1, newCityTier2, newCityTier3]
+                  const inputSetters = [setNewCityTier1, setNewCityTier2, setNewCityTier3]
+                  const chipColors = ['#e07070', '#70c090', '#8090e0']
+                  const chipBg = ['#2a1a1a', '#1a2a1a', '#1a1a2a']
+
+                  return (
+                    <div key={tier} style={{ marginBottom: ti < 2 ? '16px' : 0 }}>
+                      <div style={{ fontSize: '11px', color: '#8492a6', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' }}>
+                        {tierLabels[ti]} <span style={{ color: '#4a5a6a', fontWeight: 400 }}>({serviceArea[tier].length})</span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                        {serviceArea[tier].map(city => (
+                          <span key={city} style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            background: chipBg[ti], color: chipColors[ti],
+                            fontSize: '11px', fontWeight: 600, padding: '3px 8px 3px 9px',
+                            borderRadius: '20px', border: `1px solid ${chipColors[ti]}33`,
+                          }}>
+                            {city}
+                            <button onClick={() => removeCityFromTier(tier, city)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: chipColors[ti], fontSize: '13px', lineHeight: 1, padding: '0 1px', opacity: 0.7 }}>×</button>
+                          </span>
+                        ))}
+                        {serviceArea[tier].length === 0 && <span style={{ fontSize: '11px', color: '#4a5a6a', fontStyle: 'italic' }}>No cities</span>}
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <input
+                          type="text"
+                          placeholder={`Add to ${tierLabels[ti].split(' — ')[0]}…`}
+                          value={inputValues[ti]}
+                          onChange={e => inputSetters[ti](e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter' && inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}
+                          style={{ background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3e54', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none', flex: 1 }}
+                        />
+                        <button className="btn btn-outline btn-sm" style={{ borderColor: '#2a3e54', color: '#c8a96e' }} onClick={() => { if (inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}>+ Add</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
     </>
+  )
+}
+
+// ── Settings field helper component ───────────────────────────────────────────
+function SettingsField({
+  label, type, value, onChange, placeholder, showToggle, onToggle, last,
+}: {
+  label: string
+  type: string
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+  showToggle?: boolean
+  onToggle?: () => void
+  last?: boolean
+}) {
+  return (
+    <div style={{ marginBottom: last ? 0 : '12px' }}>
+      <label style={{ display: 'block', fontSize: '11px', color: '#8492a6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</label>
+      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+        <input
+          type={type}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder}
+          style={{
+            flex: 1, background: '#1a2e44', color: '#e8edf2',
+            border: '1px solid #2a3e54', borderRadius: '6px',
+            padding: '7px 10px', fontSize: '12px', fontFamily: 'monospace',
+            outline: 'none',
+          }}
+        />
+        {showToggle && onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            style={{ background: 'none', border: '1px solid #2a3e54', borderRadius: '6px', color: '#8492a6', cursor: 'pointer', padding: '6px 8px', fontSize: '13px' }}
+            title={type === 'password' ? 'Show' : 'Hide'}
+          >
+            {type === 'password' ? '👁' : '🙈'}
+          </button>
+        )}
+      </div>
+    </div>
   )
 }
