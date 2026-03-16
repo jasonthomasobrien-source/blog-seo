@@ -36,8 +36,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(`${loginUrl}?error=Server+auth+not+configured.`, request.url))
   }
 
-  const appUrl = process.env.APP_URL || `https://${process.env.VERCEL_URL}` || 'http://localhost:3000'
-  const redirectUri = `${appUrl}/api/auth/google/callback`
+  const redirectUri = `${new URL(request.url).origin}/api/auth/google/callback`
 
   try {
     // Exchange authorization code for access token

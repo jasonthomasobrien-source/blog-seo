@@ -1,15 +1,13 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const clientId = process.env.GOOGLE_CLIENT_ID
   if (!clientId) {
-    const loginUrl = new URL('/login', 'http://localhost')
-    loginUrl.searchParams.set('error', 'Google login is not configured.')
-    return NextResponse.redirect(loginUrl.toString().replace('http://localhost', ''))
+    return NextResponse.redirect(new URL('/login?error=Google+login+is+not+configured.', request.url))
   }
 
-  const appUrl = process.env.APP_URL || `https://${process.env.VERCEL_URL}` || 'http://localhost:3000'
-  const redirectUri = `${appUrl}/api/auth/google/callback`
+  const origin = new URL(request.url).origin
+  const redirectUri = `${origin}/api/auth/google/callback`
 
   const state = crypto.randomUUID()
 
