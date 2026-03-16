@@ -200,7 +200,8 @@ OUTPUT RULES:
 - Today's date matters — weave in seasonal context where relevant`
 
 export async function suggestTopics(
-  count: number
+  count: number,
+  send?: (msg: string) => void
 ): Promise<{ success: boolean; topics?: Array<Record<string, string>>; debug?: Record<string, unknown>; error?: string }> {
   const apiKey = process.env.ANTHROPIC_API_KEY || ''
   if (!apiKey || apiKey.startsWith('sk-ant-YOUR')) {
@@ -224,12 +225,18 @@ export async function suggestTopics(
     const publishedEntries = await getPublishedKeywords()
     const publishedKeywords = publishedEntries.map(e => e.keyword)
 
+    // Scrape live blog for existing posts (most reliable source)
+    const blogUrl = (process.env.BLOG_SITE_URL || 'joissellingwestmichigan.com/west-mi-blog')
+      .replace(/^https?:\/\//, '').replace(/\/$/, '')
+    send?.(`Scanning ${blogUrl}…`)
+    const scrapedTitles = await fetchBlogPostsFromSite()
+    send?.(`Found ${scrapedTitles.length} posts on your blog`)
+
     // Fetch actual GHL posts — robust multi-pattern fetch
+    send?.('Checking GoHighLevel posts…')
     const ghlResult = await fetchGhlPosts()
     const ghlTitles = ghlResult.titles
-
-    // Scrape live blog for existing posts (most reliable source)
-    const scrapedTitles = await fetchBlogPostsFromSite()
+    if (ghlResult.fetchedCount > 0) send?.(`Found ${ghlResult.fetchedCount} posts in GoHighLevel`)
 
     const client = new Anthropic({ apiKey })
 
@@ -263,6 +270,8 @@ export async function suggestTopics(
     }
 
     const uncoveredCities = allCities.filter(c => !coveredCityGuides.includes(c))
+    send?.(`Running gap analysis across ${allCities.length} cities — ${uncoveredCities.length} with zero coverage…`)
+    send?.(`Asking Claude to rank the top ${count} opportunities…`)
 
     // Build per-city content-type coverage matrix
     // For each covered city, figure out which CONTENT_TYPES are already present

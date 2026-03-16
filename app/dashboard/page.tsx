@@ -99,6 +99,7 @@ export default function Dashboard() {
   const [topicsLoading, setSuggestLoading] = useState(false)
   const [topicsError, setTopicsError] = useState<string>('')
   const [topicsLoaded, setTopicsLoaded] = useState(false)
+  const [topicsStatusMsg, setTopicsStatusMsg] = useState<string>('')
   const [showCustomTopic, setShowCustomTopic] = useState(false)
   const [customTopicValue, setCustomTopicValue] = useState('')
   const [customKeywordValue, setCustomKeywordValue] = useState('')
@@ -115,6 +116,9 @@ export default function Dashboard() {
 
   // Theme
   const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
+  // Blog fields collapse
+  const [showBlogFields, setShowBlogFields] = useState(true)
 
   // Profile dropdown + settings modal
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -172,6 +176,7 @@ export default function Dashboard() {
   const [runningBtn, setRunningBtn] = useState<string | null>(null)
 
   const consoleRef = useRef<HTMLDivElement>(null)
+  const seoResultsRef = useRef<HTMLDivElement>(null)
 
   // ── Scroll console to bottom whenever logLines change ──────────────────────
   useEffect(() => {
@@ -230,6 +235,22 @@ export default function Dashboard() {
     loadSeoFields()
     refreshStatus()
     checkApiKey()
+    // Load settings on init so we know which APIs are configured
+    fetch('/api/settings').then(r => r.json()).then(d => {
+      const ghlKey = d.ghl_api_key || ''
+      const loftyKey = d.lofty_api_key || ''
+      const wpUrl = d.wp_site_url || ''
+      const wpUser = d.wp_username || ''
+      setCfgGhlApiKey(ghlKey)
+      setCfgGhlLocationId(d.ghl_location_id || '')
+      setCfgGhlBlogId(d.ghl_blog_id || '')
+      setCfgLoftyApiKey(loftyKey)
+      setCfgWpSiteUrl(wpUrl)
+      setCfgWpUsername(wpUser)
+      setCfgWpAppPassword(d.wp_app_password || '')
+      // Collapse blog fields if an API is configured
+      if (ghlKey || loftyKey || (wpUrl && wpUser)) setShowBlogFields(false)
+    }).catch(() => {})
     const interval = setInterval(refreshStatus, 12000)
     return () => clearInterval(interval)
   }, [])
@@ -628,7 +649,7 @@ export default function Dashboard() {
     await runPhaseAsync('seo_check', 'Run SEO Check')
   }
 
-  // ── Suggest Topics ─────────────────────────────────────────────────────────
+  // ── Suggest Topics (streaming SSE) ─────────────────────────────────────────
   async function handleSuggestTopics() {
     if (activeTask) {
       appendLog('⚠ Another task is already running.', 'warn')
@@ -637,17 +658,44 @@ export default function Dashboard() {
     setSuggestLoading(true)
     setTopicsError('')
     setTopicsLoaded(false)
+    setTopicsStatusMsg('')
 
     try {
       const r = await fetch('/api/suggest-topics', { method: 'POST' })
-      const data = await r.json()
-      if (data.error) {
-        setTopicsError(data.error)
-      } else {
-        setSuggestedTopics(data.topics || [])
-        setTopicsDebug(data.debug || null)
-        setTopicsLoaded(true)
-        setSelectedTopicIdx(null)
+      if (!r.body) throw new Error('No response body')
+
+      const reader = r.body.getReader()
+      const decoder = new TextDecoder()
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const text = decoder.decode(value)
+        for (const line of text.split('\n')) {
+          if (!line.startsWith('data: ')) continue
+          const msg = line.slice(6)
+          if (msg.startsWith('__EXIT__')) break
+          if (msg.startsWith('__RESULT__')) {
+            try {
+              const data = JSON.parse(msg.slice(10))
+              if (data.error) {
+                setTopicsError(data.error)
+              } else {
+                setSuggestedTopics(data.topics || [])
+                setTopicsDebug(data.debug || null)
+                setTopicsLoaded(true)
+                setSelectedTopicIdx(null)
+                setTopicsStatusMsg('')
+              }
+            } catch {
+              setTopicsError('Failed to parse topic results')
+            }
+          } else if (msg && !msg.startsWith('ERROR:')) {
+            setTopicsStatusMsg(msg)
+          } else if (msg.startsWith('ERROR:')) {
+            setTopicsError(msg.slice(6).trim())
+          }
+        }
       }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -692,9 +740,11 @@ export default function Dashboard() {
       return
     }
     loadDraft()
-    loadSeoFields()
+    await loadSeoFields()
     appendLog('──────────────────────────────────────', 'info')
-    appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
+    appendLog('✓ Draft ready! Running SEO check…', 'ok')
+    await new Promise(resolve => setTimeout(resolve, 500))
+    runSeoCheck()
   }
 
   // ── Run custom / manual topic through pipeline ─────────────────────────────
@@ -730,9 +780,11 @@ export default function Dashboard() {
       return
     }
     loadDraft()
-    loadSeoFields()
+    await loadSeoFields()
     appendLog('──────────────────────────────────────', 'info')
-    appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
+    appendLog('✓ Draft ready! Running SEO check…', 'ok')
+    await new Promise(resolve => setTimeout(resolve, 500))
+    runSeoCheck()
   }
 
   // ── Mark Published ─────────────────────────────────────────────────────────
@@ -1074,6 +1126,44 @@ export default function Dashboard() {
               })}
             </div>
           )}
+          {topicsLoaded && topicsDebug && (
+            <div style={{
+              padding: '8px 18px',
+              borderBottom: '1px solid #1e2d45',
+              background: '#0a1524',
+              fontSize: '11px',
+              color: '#64748b',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              flexWrap: 'wrap',
+            }}>
+              <span style={{ color: '#f59e0b', fontWeight: 600 }}>📊</span>
+              <span>Scanned <strong style={{ color: '#94a3b8' }}>{topicsDebug.site_scraped ?? 0}</strong> posts from your blog</span>
+              {(topicsDebug.ghl_posts_found ?? 0) > 0 && (
+                <><span style={{ color: '#2a3d57' }}>·</span><span><strong style={{ color: '#94a3b8' }}>{topicsDebug.ghl_posts_found}</strong> from GHL</span></>
+              )}
+              <span style={{ color: '#2a3d57' }}>·</span>
+              <span><strong style={{ color: '#f59e0b' }}>{topicsDebug.uncovered_cities ?? 0} cities</strong> with zero coverage</span>
+              <span style={{ color: '#2a3d57' }}>·</span>
+              <span>{topicsDebug.total_excluded ?? 0} total posts excluded from suggestions</span>
+            </div>
+          )}
+          {topicsLoading && topicsStatusMsg && (
+            <div style={{
+              padding: '10px 18px',
+              borderBottom: '1px solid #1e2d45',
+              background: '#0a1524',
+              fontSize: '12px',
+              color: '#94a3b8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+            }}>
+              <span className="spinner" style={{ width: '12px', height: '12px', borderWidth: '2px', flexShrink: 0 }}></span>
+              {topicsStatusMsg}
+            </div>
+          )}
           <div className="topics-body">
             {topicsLoaded && suggestedTopics.length > 0 ? (
               <div className="topics-grid" style={{ display: 'grid' }}>
@@ -1082,6 +1172,7 @@ export default function Dashboard() {
                     key={i}
                     className={`topic-card${selectedTopicIdx === i ? ' selected' : ''}`}
                     onClick={() => !running && selectTopic(i)}
+                    title={t.gap_analysis || t.rationale || ''}
                   >
                     <div className="topic-card-title">{escHtml(t.title)}</div>
                     <div className="topic-card-keyword">{escHtml(t.keyword || '')}</div>
@@ -1109,50 +1200,11 @@ export default function Dashboard() {
                 {topicsError
                   ? <><span>⚠</span>{topicsError}</>
                   : topicsLoading
-                  ? <><span>⏳</span>Asking Claude to suggest topics for your service area…</>
-                  : <><span>✦</span>Click &quot;Suggest Topics&quot; to get 6 SEO-optimized topic ideas for your service area.<br />Click any card to select it, then run the workflow below.</>
+                  ? <><span>⏳</span>Analyzing your blog and service area…</>
+                  : <><span>✦</span>Click &quot;Suggest Topics&quot; to get 6 SEO-optimized topic ideas for your service area.<br />Click any card to select it — research and draft run automatically.</>
                 }
               </div>
             )}
-          </div>
-        </div>
-
-        {/* Topic & Keyword bar */}
-        <div className="topic-bar">
-          <div className="topic-bar-row">
-            <label>Topic:</label>
-            <div className="topic-input-wrap">
-              <input
-                id="topic-input"
-                type="text"
-                placeholder="e.g. Moving to Kalamazoo Michigan: 12 Things to Know"
-                autoComplete="off"
-                value={topicValue}
-                onChange={e => setTopicValue(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') saveTopic() }}
-              />
-            </div>
-            <label style={{ whiteSpace: 'nowrap' }}>Primary Keyword:</label>
-            <div className="keyword-input-wrap">
-              <input
-                id="keyword-input"
-                type="text"
-                placeholder="e.g. moving to kalamazoo michigan"
-                autoComplete="off"
-                value={keywordValue}
-                onChange={e => setKeywordValue(e.target.value)}
-              />
-            </div>
-            <button className="btn btn-outline btn-sm" onClick={saveTopic} disabled={running}>Save</button>
-            <button
-              className="btn btn-gold btn-sm"
-              onClick={() => runCustomTopic(topicValue, keywordValue)}
-              disabled={running || !topicValue.trim()}
-              title="Research and write a draft for this topic"
-            >
-              ▶ Run Pipeline
-            </button>
-            <span className={`save-flash${topicFlash ? ' show' : ''}`}>Saved!</span>
           </div>
         </div>
 
@@ -1166,16 +1218,17 @@ export default function Dashboard() {
               <div><h2>Pull Research</h2><p>Market data + local news</p></div>
             </div>
             <div className="card-body">
-              <p className="card-desc">Pulls current market data from Tavily Search, Zillow Research, and GKAR for the topic and cities in your service area.</p>
+              <p className="card-desc">Research runs automatically when you select a topic above. Use the button below to re-run if needed.</p>
               <button
-                className="btn btn-primary btn-full"
+                className="btn btn-outline btn-sm btn-full"
                 id="btn-research"
                 onClick={runResearch}
                 disabled={running}
+                style={{ marginBottom: '12px' }}
               >
                 {running && runningBtn === 'Pull Research'
                   ? <><span className="spinner"></span> Running…</>
-                  : 'Pull Research'}
+                  : '↺ Re-run Research'}
               </button>
               <div className="section-label">Research Data</div>
               <div className="sources-panel">{sourcesText}</div>
@@ -1195,15 +1248,17 @@ export default function Dashboard() {
                   <strong>ANTHROPIC_API_KEY not set.</strong> Add it to your environment variables.
                 </div>
               )}
+              <p className="card-desc">The draft is written automatically when you select a topic. Use the button below to regenerate if needed.</p>
               <button
-                className="btn btn-gold btn-full"
+                className="btn btn-outline btn-sm btn-full"
                 id="btn-write"
                 onClick={() => runPhase('write_draft', 'Write Draft with AI')}
                 disabled={running}
+                style={{ marginBottom: '12px' }}
               >
                 {running && runningBtn === 'Write Draft with AI'
                   ? <><span className="spinner"></span> Running…</>
-                  : 'Write Draft with AI'}
+                  : '↺ Regenerate Draft'}
               </button>
               <hr className="divider" />
               <div className="draft-toolbar">
@@ -1212,6 +1267,25 @@ export default function Dashboard() {
                 <button className="btn btn-outline btn-sm" onClick={loadDraft} disabled={running}>↻ Reload</button>
                 <span className={`save-flash${saveFlash ? ' show' : ''}`}>Saved!</span>
                 <span className="draft-hint">{wordCount} words</span>
+                {seoResult && (
+                  <button
+                    className="btn btn-outline btn-sm"
+                    style={{
+                      marginLeft: 'auto',
+                      borderColor: seoResult.pass ? '#4caf50' : '#f59e0b',
+                      color: seoResult.pass ? '#4caf50' : '#f59e0b',
+                      fontWeight: 700,
+                      fontSize: '11px',
+                    }}
+                    onClick={() => {
+                      setSeoResultVisible(true)
+                      seoResultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                    }}
+                    title="View SEO check results"
+                  >
+                    {seoResult.pass ? '✓' : '⚠'} SEO {seoResult.score}
+                  </button>
+                )}
               </div>
               <textarea
                 id="draft-editor"
@@ -1235,31 +1309,52 @@ export default function Dashboard() {
             <div className="card-body">
 
               {/* SEO Check */}
-              <div className="section-label">SEO Check</div>
-              <button
-                className="btn btn-primary btn-full"
-                id="btn-seo"
-                onClick={runSeoCheck}
-                disabled={running}
-              >
-                {running && runningBtn === 'Run SEO Check'
-                  ? <><span className="spinner"></span> Running…</>
-                  : 'Run SEO Check'}
-              </button>
-              {seoResultVisible && seoResult && (
+              <div ref={seoResultsRef} className="section-label">SEO Check</div>
+              {seoResult ? (
                 <div>
                   <div className={`seo-score-bar${seoResult.pass ? '' : ' fail'}`}>
                     {seoResult.pass ? '✓ PASS' : '✗ FAIL'} — {seoResult.required_score} required checks · {seoResult.score} total
                   </div>
-                  <div className="seo-results">
-                    {(seoResult.checks || []).map((c, i) => (
-                      <div key={i} className="seo-check-item">
-                        <span className="seo-icon">{c.pass ? '✓' : (c.required ? '✗' : '○')}</span>
-                        <span className="seo-check-name">{c.check.replace(/_/g, ' ')}</span>
-                        <span className="seo-check-detail">{c.detail || ''}</span>
-                      </div>
-                    ))}
-                  </div>
+                  {seoResultVisible && (
+                    <div className="seo-results">
+                      {(seoResult.checks || []).map((c, i) => (
+                        <div key={i} className="seo-check-item">
+                          <span className="seo-icon">{c.pass ? '✓' : (c.required ? '✗' : '○')}</span>
+                          <span className="seo-check-name">{c.check.replace(/_/g, ' ')}</span>
+                          <span className="seo-check-detail">{c.detail || ''}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <button
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: '8px', borderColor: '#1e2d45', color: '#64748b', fontSize: '11px' }}
+                    onClick={() => setSeoResultVisible(v => !v)}
+                  >
+                    {seoResultVisible ? '▴ Hide details' : '▾ Show details'}
+                  </button>
+                  <button
+                    className="btn btn-outline btn-sm"
+                    style={{ marginTop: '8px', marginLeft: '8px', borderColor: '#1e2d45', color: '#64748b', fontSize: '11px' }}
+                    onClick={runSeoCheck}
+                    disabled={running}
+                  >
+                    ↺ Re-run
+                  </button>
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#64748b', padding: '10px 0' }}>
+                  SEO check runs automatically after your draft is ready.
+                  {!running && (
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ marginLeft: '10px', borderColor: '#1e2d45', color: '#64748b', fontSize: '11px' }}
+                      onClick={runSeoCheck}
+                      disabled={running}
+                    >
+                      Run now
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -1280,20 +1375,24 @@ export default function Dashboard() {
                 ) : imageLocalExists ? (
                   <img src={`/api/hero-image?t=${imageTs}`} alt="Hero image" />
                 ) : (
-                  <div className="image-placeholder"><span>🖼</span>Click &quot;Generate Image&quot; in Step 3.</div>
+                  <div className="image-placeholder" style={{ flexDirection: 'column', gap: '8px', textAlign: 'center', padding: '20px' }}>
+                    <span style={{ fontSize: '28px' }}>📷</span>
+                    <span style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5 }}>
+                      Add your own photo of the city for best results.<br />
+                      <span style={{ fontSize: '11px', color: '#64748b' }}>AI-generated images rarely reflect the actual area.</span>
+                    </span>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      style={{ borderColor: '#1e2d45', color: '#64748b', fontSize: '11px', marginTop: '4px' }}
+                      onClick={() => runPhase('image', 'Generate Image')}
+                      disabled={running}
+                    >
+                      {running && runningBtn === 'Generate Image'
+                        ? <><span className="spinner"></span> Generating…</>
+                        : 'Generate placeholder image anyway →'}
+                    </button>
+                  </div>
                 )}
-              </div>
-              <div className="row">
-                <button
-                  className="btn btn-outline btn-sm btn-full"
-                  id="btn-image"
-                  onClick={() => runPhase('image', 'Generate Image')}
-                  disabled={running}
-                >
-                  {running && runningBtn === 'Generate Image'
-                    ? <><span className="spinner"></span> Running…</>
-                    : 'Generate Image'}
-                </button>
               </div>
 
               <hr className="divider" />
@@ -1306,28 +1405,56 @@ export default function Dashboard() {
                     Get Full Access →
                   </a>
                 </div>
-              ) : (
-                <>
-                  <button
-                    className="btn btn-success btn-full"
-                    id="btn-publish"
-                    onClick={() => runPhase('publish', 'Publish to GHL')}
-                    disabled={running}
-                  >
-                    {running && runningBtn === 'Publish to GHL'
-                      ? <><span className="spinner"></span> Running…</>
-                      : 'Publish to GHL'}
-                  </button>
-                  <button
-                    className="btn btn-outline btn-sm btn-full"
-                    id="btn-mark"
-                    onClick={markPublished}
-                    disabled={running}
-                  >
-                    ✓ Mark Keyword as Published
-                  </button>
-                </>
-              )}
+              ) : (() => {
+                  const publishLabel = cfgGhlApiKey
+                    ? 'Publish to GoHighLevel'
+                    : cfgLoftyApiKey
+                    ? 'Publish to Lofty'
+                    : cfgWpSiteUrl && cfgWpUsername
+                    ? 'Publish to WordPress'
+                    : null
+                  return publishLabel ? (
+                    <>
+                      <button
+                        className="btn btn-success btn-full"
+                        id="btn-publish"
+                        onClick={() => runPhase('publish', publishLabel)}
+                        disabled={running}
+                      >
+                        {running && runningBtn === publishLabel
+                          ? <><span className="spinner"></span> Running…</>
+                          : publishLabel}
+                      </button>
+                      <button
+                        className="btn btn-outline btn-sm btn-full"
+                        id="btn-mark"
+                        onClick={markPublished}
+                        disabled={running}
+                      >
+                        ✓ Mark Keyword as Published
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        className="btn btn-outline btn-sm btn-full"
+                        style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
+                        onClick={() => { setShowSettingsModal(true); loadSettings(); loadServiceArea() }}
+                      >
+                        Connect your blog in Settings to publish →
+                      </button>
+                      <button
+                        className="btn btn-outline btn-sm btn-full"
+                        id="btn-mark"
+                        onClick={markPublished}
+                        disabled={running}
+                      >
+                        ✓ Mark Keyword as Published
+                      </button>
+                    </>
+                  )
+                })()
+              }
             </div>
           </div>
 
@@ -1335,51 +1462,63 @@ export default function Dashboard() {
 
         {/* SEO / Copy Fields */}
         <div className="seo-fields">
-          <div className="seo-fields-header">
+          <div className="seo-fields-header" style={{ cursor: 'pointer' }} onClick={() => setShowBlogFields(v => !v)}>
             <div className="step-num" style={{ background: '#f59e0b' }}>4</div>
-            <div><h2 style={{ fontSize: '14px', fontWeight: 600 }}>Blog Fields</h2><p style={{ fontSize: '11px', color: '#f59e0b' }}>Copy into your CMS when publishing</p></div>
-            <button
-              className="btn btn-outline btn-sm"
-              style={{ marginLeft: 'auto', borderColor: '#555', color: '#aaa' }}
-              onClick={loadSeoFields}
-              disabled={running}
-            >
-              ↻ Refresh
-            </button>
-          </div>
-          <div className="seo-fields-grid">
-            <div className="seo-field-cell">
-              <div className="section-label" style={{ marginBottom: '6px' }}>Title (H1 / Page Title)</div>
-              <div id="seo-title" style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px', lineHeight: 1.4 }}>{seoTitle}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoTitle, e.currentTarget)}>Copy</button>
+            <div>
+              <h2 style={{ fontSize: '14px', fontWeight: 600 }}>📋 Blog Fields for CMS</h2>
+              <p style={{ fontSize: '11px', color: '#f59e0b' }}>
+                {cfgGhlApiKey ? 'Connected to GoHighLevel' : cfgLoftyApiKey ? 'Connected to Lofty' : (cfgWpSiteUrl && cfgWpUsername) ? 'Connected to WordPress' : 'Copy into your CMS when publishing'}
+              </p>
             </div>
-            <div className="seo-field-cell">
-              <div className="section-label" style={{ marginBottom: '6px' }}>URL Slug</div>
-              <div id="seo-slug" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#60a5fa', marginBottom: '8px', wordBreak: 'break-all' }}>{seoSlug}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoSlug, e.currentTarget)}>Copy</button>
-            </div>
-            <div className="seo-field-cell" style={{ borderRight: 'none' }}>
-              <div className="section-label" style={{ marginBottom: '6px' }}>Primary Keyword</div>
-              <div id="seo-keyword" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#f1f5f9', marginBottom: '8px' }}>{seoKeyword}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoKeyword, e.currentTarget)}>Copy</button>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ borderColor: '#555', color: '#aaa' }}
+                onClick={e => { e.stopPropagation(); loadSeoFields() }}
+                disabled={running}
+              >
+                ↻ Refresh
+              </button>
+              <span style={{ color: '#64748b', fontSize: '14px' }}>{showBlogFields ? '▴' : '▾'}</span>
             </div>
           </div>
-          <div className="seo-field-cell2">
-            <div>
-              <div className="section-label" style={{ marginBottom: '6px' }}>Meta Description (140–155 chars)</div>
-              <div id="seo-desc" style={{ fontSize: '12px', color: '#2a3d57', marginBottom: '4px', lineHeight: 1.5 }}>{seoDesc}</div>
-              <div id="seo-desc-len" style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px' }}>{seoDescLen}</div>
-              <button className="btn btn-outline btn-sm" onClick={e => copyField(seoDesc, e.currentTarget)}>Copy</button>
-            </div>
-            <div>
-              <div className="section-label" style={{ marginBottom: '6px' }}>Image Alt Text + Download</div>
-              <div id="seo-alt" style={{ fontSize: '12px', color: '#2a3d57', marginBottom: '8px' }}>{seoAlt}</div>
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <button className="btn btn-outline btn-sm" onClick={e => copyField(seoAlt, e.currentTarget)}>Copy Alt Text</button>
-                <a className="btn btn-success btn-sm" href="/api/hero-image" download="hero_image.jpg">Download Image</a>
+          {showBlogFields && (
+            <>
+              <div className="seo-fields-grid">
+                <div className="seo-field-cell">
+                  <div className="section-label" style={{ marginBottom: '6px' }}>Title (H1 / Page Title)</div>
+                  <div id="seo-title" style={{ fontSize: '13px', fontWeight: 600, color: '#f1f5f9', marginBottom: '8px', lineHeight: 1.4 }}>{seoTitle}</div>
+                  <button className="btn btn-outline btn-sm" onClick={e => copyField(seoTitle, e.currentTarget)}>Copy</button>
+                </div>
+                <div className="seo-field-cell">
+                  <div className="section-label" style={{ marginBottom: '6px' }}>URL Slug</div>
+                  <div id="seo-slug" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#60a5fa', marginBottom: '8px', wordBreak: 'break-all' }}>{seoSlug}</div>
+                  <button className="btn btn-outline btn-sm" onClick={e => copyField(seoSlug, e.currentTarget)}>Copy</button>
+                </div>
+                <div className="seo-field-cell" style={{ borderRight: 'none' }}>
+                  <div className="section-label" style={{ marginBottom: '6px' }}>Primary Keyword</div>
+                  <div id="seo-keyword" style={{ fontSize: '12px', fontFamily: 'monospace', color: '#f1f5f9', marginBottom: '8px' }}>{seoKeyword}</div>
+                  <button className="btn btn-outline btn-sm" onClick={e => copyField(seoKeyword, e.currentTarget)}>Copy</button>
+                </div>
               </div>
-            </div>
-          </div>
+              <div className="seo-field-cell2">
+                <div>
+                  <div className="section-label" style={{ marginBottom: '6px' }}>Meta Description (140–155 chars)</div>
+                  <div id="seo-desc" style={{ fontSize: '12px', color: '#2a3d57', marginBottom: '4px', lineHeight: 1.5 }}>{seoDesc}</div>
+                  <div id="seo-desc-len" style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px' }}>{seoDescLen}</div>
+                  <button className="btn btn-outline btn-sm" onClick={e => copyField(seoDesc, e.currentTarget)}>Copy</button>
+                </div>
+                <div>
+                  <div className="section-label" style={{ marginBottom: '6px' }}>Image Alt Text + Download</div>
+                  <div id="seo-alt" style={{ fontSize: '12px', color: '#2a3d57', marginBottom: '8px' }}>{seoAlt}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button className="btn btn-outline btn-sm" onClick={e => copyField(seoAlt, e.currentTarget)}>Copy Alt Text</button>
+                    <a className="btn btn-success btn-sm" href="/api/hero-image" download="hero_image.jpg">Download Image</a>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Log Console */}
