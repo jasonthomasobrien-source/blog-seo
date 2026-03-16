@@ -103,6 +103,9 @@ export default function Dashboard() {
   const [showManualEntry, setShowManualEntry] = useState(false)
   const [manualTitles, setManualTitles] = useState('')
   const [manualStatus, setManualStatus] = useState('')
+  const [showCustomTopic, setShowCustomTopic] = useState(false)
+  const [customTopicValue, setCustomTopicValue] = useState('')
+  const [customKeywordValue, setCustomKeywordValue] = useState('')
 
   // Topic & keyword inputs
   const [topicValue, setTopicValue] = useState('')
@@ -538,6 +541,44 @@ export default function Dashboard() {
     appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
   }
 
+  // ── Run custom / manual topic through pipeline ─────────────────────────────
+  async function runCustomTopic(topic: string, keyword: string) {
+    if (!topic.trim()) return
+    setTopicValue(topic)
+    setKeywordValue(keyword)
+    setShowCustomTopic(false)
+
+    await fetch('/api/topic', {
+      method: 'POST',
+      body: JSON.stringify({ topic: topic.trim(), keyword: keyword.trim() }),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    setTopicFlash(true)
+    setTimeout(() => setTopicFlash(false), 1600)
+
+    clearConsole()
+    appendLog(`▶ Custom topic: "${topic.trim()}" — pulling research…`, 'ok')
+
+    const researchOk = await runPhaseAsync('research', 'Pull Research')
+    if (!researchOk) {
+      appendLog('✗ Research failed. Check the log and retry from Step 1.', 'err')
+      return
+    }
+    loadSources()
+    appendLog('──────────────────────────────────────', 'info')
+    appendLog('Research done. Writing draft now…', 'ok')
+
+    const draftOk = await runPhaseAsync('write_draft', 'Write Draft with AI')
+    if (!draftOk) {
+      appendLog("✗ Draft failed. Click 'Write Draft with AI' to retry.", 'err')
+      return
+    }
+    loadDraft()
+    loadSeoFields()
+    appendLog('──────────────────────────────────────', 'info')
+    appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
+  }
+
   // ── Sync Posts from GHL ────────────────────────────────────────────────────
   async function syncPostsFromGhl() {
     if (activeTask) return
@@ -681,18 +722,28 @@ export default function Dashboard() {
               {syncStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{syncStatus}</span>}
               <button
                 className="btn btn-outline btn-sm"
-                onClick={() => { setShowManualEntry(v => !v); setManualStatus('') }}
+                style={{ borderColor: '#3a4a5a', color: '#c8d8e8' }}
+                onClick={() => { setShowManualEntry(v => !v); setShowCustomTopic(false); setManualStatus('') }}
                 title="Manually add existing post titles to the exclusion list"
               >
                 + Add Existing
               </button>
               <button
                 className="btn btn-outline btn-sm"
+                style={{ borderColor: '#3a4a5a', color: '#c8d8e8' }}
                 onClick={syncPostsFromGhl}
                 disabled={running || topicsLoading}
                 title="Import all existing GHL posts into the exclusion list"
               >
                 ↻ Sync from GHL
+              </button>
+              <button
+                className="btn btn-outline btn-sm"
+                style={{ borderColor: '#c8a96e', color: '#c8a96e' }}
+                onClick={() => { setShowCustomTopic(v => !v); setShowManualEntry(false) }}
+                disabled={running}
+              >
+                ✏️ Write Your Own
               </button>
               <button
                 className="btn btn-gold btn-sm"
@@ -721,6 +772,48 @@ export default function Dashboard() {
                 <button className="btn btn-gold btn-sm" onClick={addManualPosts} disabled={!manualTitles.trim()}>Save to Exclusion List</button>
                 <button className="btn btn-outline btn-sm" onClick={() => { setShowManualEntry(false); setManualStatus('') }}>Cancel</button>
                 {manualStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{manualStatus}</span>}
+              </div>
+            </div>
+          )}
+          {showCustomTopic && (
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid #2a3a4a', background: '#0d1f2d' }}>
+              <p style={{ fontSize: '12px', color: '#c8a96e', marginBottom: '12px', fontWeight: 600 }}>
+                Have a specific topic in mind? Type it in and the AI will research and write it for you.
+              </p>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                <div style={{ flex: '2', minWidth: '240px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#8492a6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Topic / Title</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Best Neighborhoods in Otsego Michigan for Families"
+                    value={customTopicValue}
+                    onChange={e => setCustomTopicValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && customTopicValue.trim()) runCustomTopic(customTopicValue, customKeywordValue) }}
+                    style={{ width: '100%', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px 10px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ flex: '1', minWidth: '180px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#8492a6', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Primary Keyword <span style={{ color: '#4a5a6a' }}>(optional)</span></label>
+                  <input
+                    type="text"
+                    placeholder="e.g. otsego michigan neighborhoods"
+                    value={customKeywordValue}
+                    onChange={e => setCustomKeywordValue(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter' && customTopicValue.trim()) runCustomTopic(customTopicValue, customKeywordValue) }}
+                    style={{ width: '100%', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px 10px', fontSize: '12px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  className="btn btn-gold btn-sm"
+                  onClick={() => runCustomTopic(customTopicValue, customKeywordValue)}
+                  disabled={running || !customTopicValue.trim()}
+                >
+                  {running ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Running…</> : '▶ Research & Write This Post'}
+                </button>
+                <button className="btn btn-outline btn-sm" style={{ borderColor: '#3a4a5a', color: '#8492a6' }} onClick={() => { setShowCustomTopic(false); setCustomTopicValue(''); setCustomKeywordValue('') }}>Cancel</button>
               </div>
             </div>
           )}
@@ -794,6 +887,14 @@ export default function Dashboard() {
               />
             </div>
             <button className="btn btn-outline btn-sm" onClick={saveTopic} disabled={running}>Save</button>
+            <button
+              className="btn btn-gold btn-sm"
+              onClick={() => runCustomTopic(topicValue, keywordValue)}
+              disabled={running || !topicValue.trim()}
+              title="Research and write a draft for this topic"
+            >
+              ▶ Run Pipeline
+            </button>
             <span className={`save-flash${topicFlash ? ' show' : ''}`}>Saved!</span>
           </div>
         </div>
