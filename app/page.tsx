@@ -77,22 +77,22 @@ const SOCIAL_PROOF = [
 
 export default function LandingPage() {
   return (
-    <div style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', background: '#fff', color: '#1a2e44' }}>
+    <div style={{ fontFamily: 'var(--font-dm-sans, "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif)', background: '#ffffff', color: '#1a2e44' }}>
 
       {/* ── Nav ─────────────────────────────────────────────────────────────── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(13,31,45,0.97)', backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgba(255,255,255,0.97)', backdropFilter: 'blur(8px)',
+        borderBottom: '1px solid #e5e7eb',
         padding: '0 32px', display: 'flex', alignItems: 'center',
         height: '60px', gap: '32px',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '9px', marginRight: 'auto' }}>
-          <span style={{ fontSize: '18px', color: '#c8a96e' }}>✦</span>
-          <span style={{ fontSize: '16px', fontWeight: 700, color: '#fff', letterSpacing: '0.01em' }}>RankReady</span>
+          <span style={{ fontSize: '18px', color: '#f59e0b' }}>✦</span>
+          <span style={{ fontSize: '16px', fontWeight: 700, color: '#1a2e44', letterSpacing: '0.01em' }}>RankReady</span>
         </div>
         {NAV_LINKS.map(l => (
-          <a key={l.href} href={l.href} style={{ fontSize: '13px', color: '#aab8c8', textDecoration: 'none', fontWeight: 500 }}>
+          <a key={l.href} href={l.href} style={{ fontSize: '13px', color: '#64748b', textDecoration: 'none', fontWeight: 500 }}>
             {l.label}
           </a>
         ))}
@@ -100,7 +100,7 @@ export default function LandingPage() {
           href="/login"
           style={{
             marginLeft: '8px', padding: '8px 20px',
-            background: '#c8a96e', color: '#1a2e44',
+            background: '#f59e0b', color: '#ffffff',
             borderRadius: '7px', fontSize: '13px', fontWeight: 700,
             textDecoration: 'none',
           }}
@@ -111,23 +111,24 @@ export default function LandingPage() {
 
       {/* ── Hero ────────────────────────────────────────────────────────────── */}
       <section style={{
-        background: 'linear-gradient(160deg, #0d1f2d 0%, #1a2e44 60%, #0f2535 100%)',
-        color: '#fff', padding: '100px 24px 90px', textAlign: 'center',
+        background: 'linear-gradient(160deg, #fffbf0 0%, #ffffff 50%, #f0f9ff 100%)',
+        color: '#1a2e44', padding: '100px 24px 90px', textAlign: 'center',
+        borderBottom: '1px solid #f0f0f0',
       }}>
-        <div style={{ display: 'inline-block', background: 'rgba(200,169,110,0.15)', border: '1px solid rgba(200,169,110,0.3)', borderRadius: '20px', padding: '5px 16px', marginBottom: '28px' }}>
-          <span style={{ fontSize: '12px', color: '#c8a96e', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>AI Blog Engine for Real Estate Agents</span>
+        <div style={{ display: 'inline-block', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: '20px', padding: '5px 16px', marginBottom: '28px' }}>
+          <span style={{ fontSize: '12px', color: '#d97706', fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}>AI Blog Engine for Real Estate Agents</span>
         </div>
         <h1 style={{
           fontSize: 'clamp(36px, 5.5vw, 64px)', fontWeight: 800,
           lineHeight: 1.1, maxWidth: '820px', margin: '0 auto 24px',
-          letterSpacing: '-0.02em',
+          letterSpacing: '-0.02em', color: '#0f172a',
         }}>
           Stop Paying for Blog Content
           <br />
-          <span style={{ color: '#c8a96e' }}>That Doesn&apos;t Rank.</span>
+          <span style={{ color: '#f59e0b' }}>That Doesn&apos;t Rank.</span>
         </h1>
         <p style={{
-          fontSize: 'clamp(16px, 2vw, 20px)', color: '#8fa8c0',
+          fontSize: 'clamp(16px, 2vw, 20px)', color: '#64748b',
           maxWidth: '600px', margin: '0 auto 40px', lineHeight: 1.6,
         }}>
           RankReady finds the exact search gaps in your service area, writes SEO-optimized posts in your voice, and publishes them to your blog — in minutes, not days.
@@ -136,7 +137,7 @@ export default function LandingPage() {
           <Link
             href="/login"
             style={{
-              padding: '15px 36px', background: '#c8a96e', color: '#1a2e44',
+              padding: '15px 36px', background: '#f59e0b', color: '#ffffff',
               borderRadius: '9px', fontSize: '16px', fontWeight: 700,
               textDecoration: 'none', display: 'inline-block',
             }}
@@ -147,7 +148,7 @@ export default function LandingPage() {
             href="/login#demo"
             style={{
               padding: '15px 36px', background: 'transparent',
-              border: '1.5px solid rgba(255,255,255,0.2)', color: '#fff',
+              border: '1.5px solid #cbd5e1', color: '#475569',
               borderRadius: '9px', fontSize: '16px', fontWeight: 600,
               textDecoration: 'none', display: 'inline-block',
             }}
@@ -164,23 +165,23 @@ export default function LandingPage() {
             { num: '100%', label: 'Written in your voice, not AI-speak' },
           ].map(s => (
             <div key={s.num} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '32px', fontWeight: 800, color: '#c8a96e', letterSpacing: '-0.02em' }}>{s.num}</div>
-              <div style={{ fontSize: '12px', color: '#6a8099', marginTop: '4px', maxWidth: '160px' }}>{s.label}</div>
+              <div style={{ fontSize: '32px', fontWeight: 800, color: '#f59e0b', letterSpacing: '-0.02em' }}>{s.num}</div>
+              <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px', maxWidth: '160px' }}>{s.label}</div>
             </div>
           ))}
         </div>
       </section>
 
       {/* ── Problem section ─────────────────────────────────────────────────── */}
-      <section style={{ background: '#f7f8fa', padding: '80px 24px' }}>
+      <section style={{ background: '#f8fafc', padding: '80px 24px', borderBottom: '1px solid #e5e7eb' }}>
         <div style={{ maxWidth: '740px', margin: '0 auto', textAlign: 'center' }}>
-          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, marginBottom: '20px', letterSpacing: '-0.01em' }}>
+          <h2 style={{ fontSize: 'clamp(24px, 3.5vw, 36px)', fontWeight: 800, marginBottom: '20px', letterSpacing: '-0.01em', color: '#0f172a' }}>
             Most agents&apos; blogs are invisible on Google.
           </h2>
-          <p style={{ fontSize: '17px', color: '#4a5a6a', lineHeight: 1.7, marginBottom: '20px' }}>
+          <p style={{ fontSize: '17px', color: '#64748b', lineHeight: 1.7, marginBottom: '20px' }}>
             They publish when they feel like it, pick topics from the top of their head, and write posts that sound like every other agent in the country. Google has no reason to rank them.
           </p>
-          <p style={{ fontSize: '17px', color: '#4a5a6a', lineHeight: 1.7, marginBottom: '20px' }}>
+          <p style={{ fontSize: '17px', color: '#64748b', lineHeight: 1.7, marginBottom: '20px' }}>
             The agents who win on search do one thing differently: they systematically cover every city and every keyword in their service area, posting consistently, with content that actually answers local search queries.
           </p>
           <p style={{ fontSize: '17px', color: '#1a2e44', lineHeight: 1.7, fontWeight: 600 }}>
@@ -190,25 +191,25 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ────────────────────────────────────────────────────────── */}
-      <section id="features" style={{ padding: '90px 24px', background: '#fff' }}>
+      <section id="features" style={{ padding: '90px 24px', background: '#ffffff' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '14px' }}>
+            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '14px', color: '#0f172a' }}>
               Everything you need to dominate local search
             </h2>
-            <p style={{ fontSize: '17px', color: '#6a7a8a', maxWidth: '540px', margin: '0 auto' }}>
+            <p style={{ fontSize: '17px', color: '#64748b', maxWidth: '540px', margin: '0 auto' }}>
               Built specifically for real estate agents who want organic leads without hiring a content agency.
             </p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
             {FEATURES.map(f => (
               <div key={f.title} style={{
-                border: '1.5px solid #e8edf2', borderRadius: '12px', padding: '28px',
-                background: '#fafbfc',
+                border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '28px',
+                background: '#fafafa', transition: 'border-color 0.15s, box-shadow 0.15s',
               }}>
                 <div style={{ fontSize: '32px', marginBottom: '14px' }}>{f.icon}</div>
-                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1a2e44', marginBottom: '10px' }}>{f.title}</h3>
-                <p style={{ fontSize: '14px', color: '#5a6a7a', lineHeight: 1.65 }}>{f.body}</p>
+                <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>{f.title}</h3>
+                <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.65 }}>{f.body}</p>
               </div>
             ))}
           </div>
@@ -216,13 +217,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── How It Works ────────────────────────────────────────────────────── */}
-      <section id="how-it-works" style={{ padding: '90px 24px', background: '#0d1f2d' }}>
+      <section id="how-it-works" style={{ padding: '90px 24px', background: '#fffbf0', borderTop: '1px solid #fde68a', borderBottom: '1px solid #fde68a' }}>
         <div style={{ maxWidth: '900px', margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: '56px' }}>
-            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.015em', marginBottom: '14px' }}>
+            <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 40px)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.015em', marginBottom: '14px' }}>
               From zero to published in three steps
             </h2>
-            <p style={{ fontSize: '16px', color: '#6a8099', maxWidth: '480px', margin: '0 auto' }}>
+            <p style={{ fontSize: '16px', color: '#64748b', maxWidth: '480px', margin: '0 auto' }}>
               No prompts to write. No tools to configure. Just pick, write, publish.
             </p>
           </div>
@@ -231,22 +232,23 @@ export default function LandingPage() {
               <div key={step.num} style={{
                 display: 'flex', gap: '28px', alignItems: 'flex-start',
                 paddingBottom: i < STEPS.length - 1 ? '40px' : '0',
-                borderLeft: i < STEPS.length - 1 ? '2px solid rgba(200,169,110,0.2)' : 'none',
+                borderLeft: i < STEPS.length - 1 ? '2px solid rgba(245,158,11,0.3)' : 'none',
                 marginLeft: '21px',
                 paddingLeft: '36px',
                 position: 'relative',
               }}>
                 <div style={{
                   position: 'absolute', left: '-21px', top: '0',
-                  width: '42px', height: '42px', background: '#c8a96e',
+                  width: '42px', height: '42px', background: '#f59e0b',
                   borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: '16px', color: '#1a2e44', flexShrink: 0,
+                  fontWeight: 800, fontSize: '16px', color: '#ffffff', flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(245,158,11,0.3)',
                 }}>
                   {step.num}
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '19px', fontWeight: 700, color: '#fff', marginBottom: '10px' }}>{step.title}</h3>
-                  <p style={{ fontSize: '15px', color: '#7a95aa', lineHeight: 1.65 }}>{step.body}</p>
+                  <h3 style={{ fontSize: '19px', fontWeight: 700, color: '#0f172a', marginBottom: '10px' }}>{step.title}</h3>
+                  <p style={{ fontSize: '15px', color: '#64748b', lineHeight: 1.65 }}>{step.body}</p>
                 </div>
               </div>
             ))}
@@ -255,23 +257,24 @@ export default function LandingPage() {
       </section>
 
       {/* ── Social Proof ────────────────────────────────────────────────────── */}
-      <section style={{ padding: '90px 24px', background: '#f7f8fa' }}>
+      <section style={{ padding: '90px 24px', background: '#f8fafc' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 800, textAlign: 'center', marginBottom: '48px', letterSpacing: '-0.01em' }}>
+          <h2 style={{ fontSize: 'clamp(24px, 3vw, 36px)', fontWeight: 800, textAlign: 'center', marginBottom: '48px', letterSpacing: '-0.01em', color: '#0f172a' }}>
             Agents are already winning on search
           </h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
             {SOCIAL_PROOF.map(t => (
               <div key={t.name} style={{
-                background: '#fff', borderRadius: '12px', padding: '28px',
-                border: '1.5px solid #e8edf2', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
+                background: '#ffffff', borderRadius: '12px', padding: '28px',
+                border: '1.5px solid #e5e7eb', boxShadow: '0 2px 16px rgba(0,0,0,0.04)',
               }}>
-                <p style={{ fontSize: '14px', color: '#3a4a5a', lineHeight: 1.7, marginBottom: '20px', fontStyle: 'italic' }}>
+                <div style={{ color: '#f59e0b', fontSize: '24px', marginBottom: '12px', letterSpacing: '-0.05em' }}>&ldquo;&rdquo;</div>
+                <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.7, marginBottom: '20px', fontStyle: 'italic' }}>
                   &ldquo;{t.quote}&rdquo;
                 </p>
                 <div>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#1a2e44' }}>{t.name}</div>
-                  <div style={{ fontSize: '12px', color: '#8492a6', marginTop: '2px' }}>{t.role}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{t.name}</div>
+                  <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>{t.role}</div>
                 </div>
               </div>
             ))}
@@ -280,27 +283,27 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pricing / CTA ───────────────────────────────────────────────────── */}
-      <section id="pricing" style={{ padding: '90px 24px', background: '#fff', textAlign: 'center' }}>
+      <section id="pricing" style={{ padding: '90px 24px', background: '#ffffff', textAlign: 'center' }}>
         <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <div style={{ display: 'inline-block', background: '#e6f7ee', borderRadius: '20px', padding: '5px 16px', marginBottom: '24px' }}>
-            <span style={{ fontSize: '12px', color: '#1d8348', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Simple Pricing</span>
+          <div style={{ display: 'inline-block', background: '#ecfdf5', borderRadius: '20px', padding: '5px 16px', marginBottom: '24px' }}>
+            <span style={{ fontSize: '12px', color: '#059669', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Simple Pricing</span>
           </div>
-          <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '16px', color: '#0f172a' }}>
             Pick your plan. Start ranking.
           </h2>
-          <p style={{ fontSize: '17px', color: '#6a7a8a', lineHeight: 1.6, marginBottom: '52px' }}>
+          <p style={{ fontSize: '17px', color: '#64748b', lineHeight: 1.6, marginBottom: '52px' }}>
             No per-post fees. No word limits. Cancel anytime.
           </p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', alignItems: 'start' }}>
 
             {/* Solo */}
-            <div style={{ border: '1.5px solid #e8edf2', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#fafbfc' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#8492a6', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Solo</div>
-              <div style={{ fontSize: '44px', fontWeight: 900, color: '#1a2e44', letterSpacing: '-0.03em', marginBottom: '4px' }}>
-                $49<span style={{ fontSize: '16px', fontWeight: 500, color: '#8492a6' }}>/mo</span>
+            <div style={{ border: '1.5px solid #e5e7eb', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#fafafa' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Solo</div>
+              <div style={{ fontSize: '44px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', marginBottom: '4px' }}>
+                $49<span style={{ fontSize: '16px', fontWeight: 500, color: '#94a3b8' }}>/mo</span>
               </div>
-              <div style={{ fontSize: '13px', color: '#8492a6', marginBottom: '28px' }}>4 posts per month</div>
+              <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '28px' }}>4 posts per month</div>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '11px', marginBottom: '32px', padding: 0 }}>
                 {[
                   'AI topic suggestions for your service area',
@@ -311,8 +314,8 @@ export default function LandingPage() {
                   'Copy/paste publish to any CMS',
                   '1 service area',
                 ].map(item => (
-                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#3a4a5a', alignItems: 'flex-start' }}>
-                    <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#475569', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#f59e0b', flexShrink: 0, marginTop: '1px' }}>✓</span>
                     {item}
                   </li>
                 ))}
@@ -323,15 +326,15 @@ export default function LandingPage() {
             </div>
 
             {/* Pro — highlighted */}
-            <div style={{ border: '2px solid #c8a96e', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#1a2e44', position: 'relative' }}>
-              <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', background: '#c8a96e', color: '#1a2e44', fontSize: '11px', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', padding: '4px 16px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+            <div style={{ border: '2px solid #f59e0b', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#1a2e44', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', background: '#f59e0b', color: '#ffffff', fontSize: '11px', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', padding: '4px 16px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
                 Most Popular
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Pro</div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Pro</div>
               <div style={{ fontSize: '44px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '4px' }}>
-                $99<span style={{ fontSize: '16px', fontWeight: 500, color: '#8fa8c0' }}>/mo</span>
+                $99<span style={{ fontSize: '16px', fontWeight: 500, color: '#94a3b8' }}>/mo</span>
               </div>
-              <div style={{ fontSize: '13px', color: '#8fa8c0', marginBottom: '28px' }}>Unlimited posts</div>
+              <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '28px' }}>Unlimited posts</div>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '11px', marginBottom: '32px', padding: 0 }}>
                 {[
                   'Everything in Solo',
@@ -340,24 +343,24 @@ export default function LandingPage() {
                   'API publishing to GHL, Lofty, or WordPress',
                   '1 service area',
                 ].map(item => (
-                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#c8d8e8', alignItems: 'flex-start' }}>
-                    <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#cbd5e1', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#f59e0b', flexShrink: 0, marginTop: '1px' }}>✓</span>
                     {item}
                   </li>
                 ))}
               </ul>
-              <Link href="/login" style={{ display: 'block', width: '100%', padding: '13px', background: '#c8a96e', color: '#1a2e44', borderRadius: '9px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box' }}>
+              <Link href="/login" style={{ display: 'block', width: '100%', padding: '13px', background: '#f59e0b', color: '#ffffff', borderRadius: '9px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box' }}>
                 Get Started →
               </Link>
             </div>
 
             {/* Team */}
-            <div style={{ border: '1.5px solid #e8edf2', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#fafbfc' }}>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#8492a6', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Team</div>
-              <div style={{ fontSize: '44px', fontWeight: 900, color: '#1a2e44', letterSpacing: '-0.03em', marginBottom: '4px' }}>
-                $249<span style={{ fontSize: '16px', fontWeight: 500, color: '#8492a6' }}>/mo</span>
+            <div style={{ border: '1.5px solid #e5e7eb', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#fafafa' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#94a3b8', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Team</div>
+              <div style={{ fontSize: '44px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.03em', marginBottom: '4px' }}>
+                $249<span style={{ fontSize: '16px', fontWeight: 500, color: '#94a3b8' }}>/mo</span>
               </div>
-              <div style={{ fontSize: '13px', color: '#8492a6', marginBottom: '28px' }}>Up to 5 agents</div>
+              <div style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '28px' }}>Up to 5 agents</div>
               <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '11px', marginBottom: '32px', padding: 0 }}>
                 {[
                   'Everything in Pro',
@@ -366,8 +369,8 @@ export default function LandingPage() {
                   'White-label option (remove RankReady branding)',
                   'Priority support',
                 ].map(item => (
-                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#3a4a5a', alignItems: 'flex-start' }}>
-                    <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#475569', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#f59e0b', flexShrink: 0, marginTop: '1px' }}>✓</span>
                     {item}
                   </li>
                 ))}
@@ -379,9 +382,9 @@ export default function LandingPage() {
 
           </div>
 
-          <p style={{ fontSize: '13px', color: '#aab8c8', marginTop: '36px' }}>
+          <p style={{ fontSize: '13px', color: '#94a3b8', marginTop: '36px' }}>
             Already a member?{' '}
-            <Link href="/login" style={{ color: '#1a6b9e', textDecoration: 'none', fontWeight: 600 }}>
+            <Link href="/login" style={{ color: '#f59e0b', textDecoration: 'none', fontWeight: 600 }}>
               Sign in here
             </Link>
           </p>
@@ -390,14 +393,14 @@ export default function LandingPage() {
 
       {/* ── Footer ──────────────────────────────────────────────────────────── */}
       <footer style={{
-        background: '#0d1f2d', borderTop: '1px solid rgba(255,255,255,0.06)',
+        background: '#0f172a', borderTop: '1px solid rgba(255,255,255,0.06)',
         padding: '32px 24px', textAlign: 'center',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
-          <span style={{ color: '#c8a96e', fontSize: '16px' }}>✦</span>
+          <span style={{ color: '#f59e0b', fontSize: '16px' }}>✦</span>
           <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>RankReady</span>
         </div>
-        <p style={{ fontSize: '12px', color: '#4a5a6a' }}>
+        <p style={{ fontSize: '12px', color: '#475569' }}>
           AI Blog Engine for Real Estate Agents · Built for local search dominance
         </p>
       </footer>

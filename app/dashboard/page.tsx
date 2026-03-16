@@ -113,6 +113,9 @@ export default function Dashboard() {
   const [newCityTier2, setNewCityTier2] = useState('')
   const [newCityTier3, setNewCityTier3] = useState('')
 
+  // Theme
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark')
+
   // Profile dropdown + settings modal
   const [showProfileMenu, setShowProfileMenu] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -188,6 +191,22 @@ export default function Dashboard() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   })
+
+  // ── Theme init & toggle ─────────────────────────────────────────────────────
+  useEffect(() => {
+    const saved = localStorage.getItem('rr_theme') as 'dark' | 'light' | null
+    if (saved) {
+      setTheme(saved)
+      document.documentElement.setAttribute('data-theme', saved)
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const next = theme === 'dark' ? 'light' : 'dark'
+    setTheme(next)
+    document.documentElement.setAttribute('data-theme', next)
+    localStorage.setItem('rr_theme', next)
+  }
 
   // ── Close profile menu when clicking outside ────────────────────────────────
   useEffect(() => {
@@ -735,7 +754,10 @@ export default function Dashboard() {
       {/* Header */}
       <div className="header">
         <div>
-          <h1>West Michigan Blog Dashboard</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ color: '#f59e0b', fontSize: '16px' }}>✦</span>
+            <h1 style={{ margin: 0 }}>RankReady</h1>
+          </div>
           <p>Jason O&apos;Brien — SEO Blog Post Generator · jobrienhomes.com</p>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -746,6 +768,15 @@ export default function Dashboard() {
             disabled={running}
           >
             ↻ Refresh
+          </button>
+          {/* Theme toggle */}
+          <button
+            className="btn btn-outline btn-sm"
+            style={{ width: '34px', height: '34px', padding: 0, borderRadius: '50%', fontSize: '15px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? '☀' : '🌙'}
           </button>
           {/* Profile dropdown */}
           <div id="profile-menu-wrapper" style={{ position: 'relative' }}>
@@ -768,18 +799,20 @@ export default function Dashboard() {
             {showProfileMenu && (
               <div style={{
                 position: 'absolute', top: 'calc(100% + 6px)', right: 0,
-                background: '#0b1117', border: '1px solid #1e2d45',
-                borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                background: theme === 'light' ? '#ffffff' : '#0b1117',
+                border: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
+                borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
                 minWidth: '170px', zIndex: 200, overflow: 'hidden',
               }}>
                 <button
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     padding: '10px 16px', background: 'none', border: 'none',
-                    color: '#f1f5f9', fontSize: '13px', cursor: 'pointer',
-                    borderBottom: '1px solid #1e2d45',
+                    color: theme === 'light' ? '#1a2e44' : '#f1f5f9',
+                    fontSize: '13px', cursor: 'pointer',
+                    borderBottom: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#162032')}
+                  onMouseEnter={e => (e.currentTarget.style.background = theme === 'light' ? '#f1f5f9' : '#162032')}
                   onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   onClick={() => { setShowSettingsModal(true); setShowProfileMenu(false); loadSettings(); loadServiceArea() }}
                 >
@@ -789,12 +822,12 @@ export default function Dashboard() {
                   style={{
                     display: 'block', width: '100%', textAlign: 'left',
                     padding: '10px 16px', background: 'none', border: 'none',
-                    color: '#475569', fontSize: '13px', cursor: 'default',
-                    borderBottom: '1px solid #1e2d45',
+                    color: '#94a3b8', fontSize: '13px', cursor: 'default',
+                    borderBottom: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
                   }}
                   disabled
                 >
-                  💳 Billing <span style={{ fontSize: '10px', color: '#2a3d57' }}>coming soon</span>
+                  💳 Billing <span style={{ fontSize: '10px', color: theme === 'light' ? '#cbd5e1' : '#2a3d57' }}>coming soon</span>
                 </button>
                 <form action="/api/auth/logout" method="POST" style={{ margin: 0 }}>
                   <button
@@ -802,9 +835,9 @@ export default function Dashboard() {
                     style={{
                       display: 'block', width: '100%', textAlign: 'left',
                       padding: '10px 16px', background: 'none', border: 'none',
-                      color: '#e07070', fontSize: '13px', cursor: 'pointer',
+                      color: '#ef4444', fontSize: '13px', cursor: 'pointer',
                     }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#162032')}
+                    onMouseEnter={e => (e.currentTarget.style.background = theme === 'light' ? '#fef2f2' : '#162032')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
                     ↪ Log Out
@@ -1389,16 +1422,18 @@ export default function Dashboard() {
           onClick={e => { if (e.target === e.currentTarget) setShowSettingsModal(false) }}
         >
           <div style={{
-            background: '#0b1117', border: '1px solid #1e2d45', borderRadius: '12px',
-            width: '100%', maxWidth: '580px', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+            background: theme === 'light' ? '#ffffff' : '#0b1117',
+            border: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
+            borderRadius: '12px',
+            width: '100%', maxWidth: '580px', boxShadow: '0 20px 60px rgba(0,0,0,0.4)',
           }}>
             {/* Modal header */}
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '20px 24px', borderBottom: '1px solid #1e2d45',
+              padding: '20px 24px', borderBottom: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
             }}>
               <div>
-                <h2 style={{ fontSize: '16px', fontWeight: 700, color: '#f1f5f9', margin: 0 }}>Settings</h2>
+                <h2 style={{ fontSize: '16px', fontWeight: 700, color: theme === 'light' ? '#1a2e44' : '#f1f5f9', margin: 0 }}>Settings</h2>
                 <p style={{ fontSize: '12px', color: '#64748b', margin: '3px 0 0' }}>Configure your integrations and service area</p>
               </div>
               <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
@@ -1426,9 +1461,9 @@ export default function Dashboard() {
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>⚡</span> GoHighLevel (GHL)
                 </div>
-                <SettingsField label="API Key" type={showGhlKey ? 'text' : 'password'} value={cfgGhlApiKey} onChange={setCfgGhlApiKey} placeholder="Bearer token from GHL" onToggle={() => setShowGhlKey(v => !v)} showToggle />
-                <SettingsField label="Location ID" type="text" value={cfgGhlLocationId} onChange={setCfgGhlLocationId} placeholder="e.g. abc123XYZ" />
-                <SettingsField label="Blog ID" type="text" value={cfgGhlBlogId} onChange={setCfgGhlBlogId} placeholder="e.g. xyz789" last />
+                <SettingsField label="API Key" type={showGhlKey ? 'text' : 'password'} value={cfgGhlApiKey} onChange={setCfgGhlApiKey} placeholder="Bearer token from GHL" onToggle={() => setShowGhlKey(v => !v)} showToggle theme={theme} />
+                <SettingsField label="Location ID" type="text" value={cfgGhlLocationId} onChange={setCfgGhlLocationId} placeholder="e.g. abc123XYZ" theme={theme} />
+                <SettingsField label="Blog ID" type="text" value={cfgGhlBlogId} onChange={setCfgGhlBlogId} placeholder="e.g. xyz789" last theme={theme} />
               </div>
 
               {/* ── Lofty ── */}
@@ -1436,7 +1471,7 @@ export default function Dashboard() {
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>🏠</span> Lofty (Real Broker / eXp)
                 </div>
-                <SettingsField label="API Key" type={showLoftyKey ? 'text' : 'password'} value={cfgLoftyApiKey} onChange={setCfgLoftyApiKey} placeholder="Lofty API token" onToggle={() => setShowLoftyKey(v => !v)} showToggle last />
+                <SettingsField label="API Key" type={showLoftyKey ? 'text' : 'password'} value={cfgLoftyApiKey} onChange={setCfgLoftyApiKey} placeholder="Lofty API token" onToggle={() => setShowLoftyKey(v => !v)} showToggle last theme={theme} />
               </div>
 
               {/* ── WordPress ── */}
@@ -1444,9 +1479,9 @@ export default function Dashboard() {
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ fontSize: '16px' }}>📝</span> WordPress
                 </div>
-                <SettingsField label="Site URL" type="text" value={cfgWpSiteUrl} onChange={setCfgWpSiteUrl} placeholder="https://yoursite.com" />
-                <SettingsField label="Username" type="text" value={cfgWpUsername} onChange={setCfgWpUsername} placeholder="WordPress username" />
-                <SettingsField label="Application Password" type={showWpPassword ? 'text' : 'password'} value={cfgWpAppPassword} onChange={setCfgWpAppPassword} placeholder="xxxx xxxx xxxx xxxx" onToggle={() => setShowWpPassword(v => !v)} showToggle last />
+                <SettingsField label="Site URL" type="text" value={cfgWpSiteUrl} onChange={setCfgWpSiteUrl} placeholder="https://yoursite.com" theme={theme} />
+                <SettingsField label="Username" type="text" value={cfgWpUsername} onChange={setCfgWpUsername} placeholder="WordPress username" theme={theme} />
+                <SettingsField label="Application Password" type={showWpPassword ? 'text' : 'password'} value={cfgWpAppPassword} onChange={setCfgWpAppPassword} placeholder="xxxx xxxx xxxx xxxx" onToggle={() => setShowWpPassword(v => !v)} showToggle last theme={theme} />
               </div>
 
               {/* ── Service Area ── */}
@@ -1462,7 +1497,9 @@ export default function Dashboard() {
                   const inputValues = [newCityTier1, newCityTier2, newCityTier3]
                   const inputSetters = [setNewCityTier1, setNewCityTier2, setNewCityTier3]
                   const chipColors = ['#e07070', '#70c090', '#8090e0']
-                  const chipBg = ['#2a1a1a', '#1a2a1a', '#1a1a2a']
+                  const chipBg = theme === 'light'
+                    ? ['#fef2f2', '#ecfdf5', '#eff6ff']
+                    : ['#2a1a1a', '#1a2a1a', '#1a1a2a']
 
                   return (
                     <div key={tier} style={{ marginBottom: ti < 2 ? '16px' : 0 }}>
@@ -1490,7 +1527,7 @@ export default function Dashboard() {
                           value={inputValues[ti]}
                           onChange={e => inputSetters[ti](e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter' && inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}
-                          style={{ background: '#162032', color: '#f1f5f9', border: '1px solid #1e2d45', borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none', flex: 1 }}
+                          style={{ background: theme === 'light' ? '#f8fafc' : '#162032', color: theme === 'light' ? '#1a2e44' : '#f1f5f9', border: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`, borderRadius: '6px', padding: '5px 10px', fontSize: '12px', outline: 'none', flex: 1 }}
                         />
                         <button className="btn btn-outline btn-sm" style={{ borderColor: '#1e2d45', color: '#f59e0b' }} onClick={() => { if (inputValues[ti].trim()) { addCityToTier(tier, inputValues[ti]); inputSetters[ti]('') } }}>+ Add</button>
                       </div>
@@ -1509,7 +1546,7 @@ export default function Dashboard() {
 
 // ── Settings field helper component ───────────────────────────────────────────
 function SettingsField({
-  label, type, value, onChange, placeholder, showToggle, onToggle, last,
+  label, type, value, onChange, placeholder, showToggle, onToggle, last, theme = 'dark',
 }: {
   label: string
   type: string
@@ -1519,6 +1556,7 @@ function SettingsField({
   showToggle?: boolean
   onToggle?: () => void
   last?: boolean
+  theme?: 'dark' | 'light'
 }) {
   return (
     <div style={{ marginBottom: last ? 0 : '12px' }}>
@@ -1530,8 +1568,11 @@ function SettingsField({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           style={{
-            flex: 1, background: '#162032', color: '#f1f5f9',
-            border: '1px solid #1e2d45', borderRadius: '6px',
+            flex: 1,
+            background: theme === 'light' ? '#f8fafc' : '#162032',
+            color: theme === 'light' ? '#1a2e44' : '#f1f5f9',
+            border: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
+            borderRadius: '6px',
             padding: '7px 10px', fontSize: '12px', fontFamily: 'monospace',
             outline: 'none',
           }}
@@ -1540,7 +1581,11 @@ function SettingsField({
           <button
             type="button"
             onClick={onToggle}
-            style={{ background: 'none', border: '1px solid #1e2d45', borderRadius: '6px', color: '#64748b', cursor: 'pointer', padding: '6px 8px', fontSize: '13px' }}
+            style={{
+              background: 'none',
+              border: `1px solid ${theme === 'light' ? '#e5e7eb' : '#1e2d45'}`,
+              borderRadius: '6px', color: '#64748b', cursor: 'pointer', padding: '6px 8px', fontSize: '13px',
+            }}
             title={type === 'password' ? 'Show' : 'Hide'}
           >
             {type === 'password' ? '👁' : '🙈'}
