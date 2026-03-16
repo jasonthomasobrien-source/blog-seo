@@ -99,10 +99,6 @@ export default function Dashboard() {
   const [topicsLoading, setSuggestLoading] = useState(false)
   const [topicsError, setTopicsError] = useState<string>('')
   const [topicsLoaded, setTopicsLoaded] = useState(false)
-  const [syncStatus, setSyncStatus] = useState<string>('')
-  const [showManualEntry, setShowManualEntry] = useState(false)
-  const [manualTitles, setManualTitles] = useState('')
-  const [manualStatus, setManualStatus] = useState('')
   const [showCustomTopic, setShowCustomTopic] = useState(false)
   const [customTopicValue, setCustomTopicValue] = useState('')
   const [customKeywordValue, setCustomKeywordValue] = useState('')
@@ -579,54 +575,6 @@ export default function Dashboard() {
     appendLog('✓ Draft ready! Review it in the editor, then run the SEO Check.', 'ok')
   }
 
-  // ── Sync Posts from GHL ────────────────────────────────────────────────────
-  async function syncPostsFromGhl() {
-    if (activeTask) return
-    setSyncStatus('Syncing…')
-    try {
-      const r = await fetch('/api/sync-posts', { method: 'POST' })
-      const data = await r.json()
-      if (data.error) {
-        setSyncStatus(`Error: ${data.error}`)
-      } else {
-        setSyncStatus(`Synced: ${data.ghl_posts_found} GHL posts found, ${data.added_to_redis} new`)
-        appendLog(`✓ Sync: ${data.ghl_posts_found} GHL posts found, ${data.added_to_redis} added to exclusion list`, 'ok')
-        if (data.debug) {
-          for (const line of data.debug) appendLog(`  GHL API: ${line}`, 'info')
-        }
-      }
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e)
-      setSyncStatus(`Error: ${msg}`)
-    }
-    setTimeout(() => setSyncStatus(''), 8000)
-  }
-
-  // ── Manual post entry ──────────────────────────────────────────────────────
-  async function addManualPosts() {
-    const titles = manualTitles.split('\n').map(t => t.trim()).filter(Boolean)
-    if (!titles.length) return
-    setManualStatus('Saving…')
-    try {
-      const r = await fetch('/api/add-posts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ titles }),
-      })
-      const data = await r.json()
-      if (data.error) {
-        setManualStatus(`Error: ${data.error}`)
-      } else {
-        setManualStatus(`✓ Added ${data.added} posts (${data.skipped} already tracked)`)
-        setManualTitles('')
-        appendLog(`✓ Manually added ${data.added} posts to exclusion list`, 'ok')
-        setTimeout(() => { setShowManualEntry(false); setManualStatus('') }, 2000)
-      }
-    } catch (e: unknown) {
-      setManualStatus(`Error: ${e instanceof Error ? e.message : String(e)}`)
-    }
-  }
-
   // ── Mark Published ─────────────────────────────────────────────────────────
   async function markPublished() {
     try {
@@ -719,28 +667,10 @@ export default function Dashboard() {
               )}
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
-              {syncStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{syncStatus}</span>}
-              <button
-                className="btn btn-outline btn-sm"
-                style={{ borderColor: '#3a4a5a', color: '#c8d8e8' }}
-                onClick={() => { setShowManualEntry(v => !v); setShowCustomTopic(false); setManualStatus('') }}
-                title="Manually add existing post titles to the exclusion list"
-              >
-                + Add Existing
-              </button>
-              <button
-                className="btn btn-outline btn-sm"
-                style={{ borderColor: '#3a4a5a', color: '#c8d8e8' }}
-                onClick={syncPostsFromGhl}
-                disabled={running || topicsLoading}
-                title="Import all existing GHL posts into the exclusion list"
-              >
-                ↻ Sync from GHL
-              </button>
               <button
                 className="btn btn-outline btn-sm"
                 style={{ borderColor: '#c8a96e', color: '#c8a96e' }}
-                onClick={() => { setShowCustomTopic(v => !v); setShowManualEntry(false) }}
+                onClick={() => setShowCustomTopic(v => !v)}
                 disabled={running}
               >
                 ✏️ Write Your Own
@@ -757,24 +687,6 @@ export default function Dashboard() {
               </button>
             </div>
           </div>
-          {showManualEntry && (
-            <div style={{ padding: '12px 16px', borderBottom: '1px solid #2a3a4a', background: '#0d1f2d' }}>
-              <p style={{ fontSize: '12px', color: '#c8a96e', marginBottom: '8px', fontWeight: 600 }}>
-                Paste your existing post titles — one per line — to exclude them from suggestions:
-              </p>
-              <textarea
-                style={{ width: '100%', minHeight: '100px', background: '#1a2e44', color: '#e8edf2', border: '1px solid #2a3a4a', borderRadius: '6px', padding: '8px', fontSize: '12px', fontFamily: 'monospace', resize: 'vertical', boxSizing: 'border-box' }}
-                placeholder={'Moving to Portage Michigan: 10 Things to Know\nLiving in Mattawan Michigan: Pros and Cons\nKalamazoo real estate in March 2026 — what the numbers actually say'}
-                value={manualTitles}
-                onChange={e => setManualTitles(e.target.value)}
-              />
-              <div style={{ display: 'flex', gap: '8px', marginTop: '8px', alignItems: 'center' }}>
-                <button className="btn btn-gold btn-sm" onClick={addManualPosts} disabled={!manualTitles.trim()}>Save to Exclusion List</button>
-                <button className="btn btn-outline btn-sm" onClick={() => { setShowManualEntry(false); setManualStatus('') }}>Cancel</button>
-                {manualStatus && <span style={{ fontSize: '11px', color: '#8492a6' }}>{manualStatus}</span>}
-              </div>
-            </div>
-          )}
           {showCustomTopic && (
             <div style={{ padding: '16px 18px', borderBottom: '1px solid #2a3a4a', background: '#0d1f2d' }}>
               <p style={{ fontSize: '12px', color: '#c8a96e', marginBottom: '12px', fontWeight: 600 }}>

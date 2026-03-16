@@ -34,8 +34,8 @@ const FEATURES = [
   },
   {
     icon: '🚀',
-    title: 'Publish Directly to GHL',
-    body: 'One button sends the post to your GoHighLevel blog as a draft, with categories auto-assigned and the hero image attached. Open GHL, review, hit publish. Done.',
+    title: 'Publish to Your CMS',
+    body: 'Copy formatted fields directly into any CMS — or connect to GoHighLevel, Lofty, or WordPress for one-click publishing. Works with whatever platform your brokerage runs.',
   },
 ]
 
@@ -281,54 +281,105 @@ export default function LandingPage() {
 
       {/* ── Pricing / CTA ───────────────────────────────────────────────────── */}
       <section id="pricing" style={{ padding: '90px 24px', background: '#fff', textAlign: 'center' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
           <div style={{ display: 'inline-block', background: '#e6f7ee', borderRadius: '20px', padding: '5px 16px', marginBottom: '24px' }}>
             <span style={{ fontSize: '12px', color: '#1d8348', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Simple Pricing</span>
           </div>
           <h2 style={{ fontSize: 'clamp(28px, 4vw, 44px)', fontWeight: 800, letterSpacing: '-0.015em', marginBottom: '16px' }}>
-            One flat monthly rate.<br />Unlimited posts.
+            Pick your plan. Start ranking.
           </h2>
-          <p style={{ fontSize: '17px', color: '#6a7a8a', lineHeight: 1.6, marginBottom: '40px' }}>
-            No per-post fees. No word limits. No separate tool subscriptions. Write as many posts as your market needs.
+          <p style={{ fontSize: '17px', color: '#6a7a8a', lineHeight: 1.6, marginBottom: '52px' }}>
+            No per-post fees. No word limits. Cancel anytime.
           </p>
-          <div style={{
-            background: '#1a2e44', borderRadius: '16px', padding: '40px',
-            color: '#fff', marginBottom: '32px',
-          }}>
-            <div style={{ fontSize: '52px', fontWeight: 900, color: '#c8a96e', letterSpacing: '-0.03em', marginBottom: '6px' }}>
-              $97<span style={{ fontSize: '20px', fontWeight: 500, color: '#8fa8c0' }}>/mo</span>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px', alignItems: 'start' }}>
+
+            {/* Solo */}
+            <div style={{ border: '1.5px solid #e8edf2', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#fafbfc' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#8492a6', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Solo</div>
+              <div style={{ fontSize: '44px', fontWeight: 900, color: '#1a2e44', letterSpacing: '-0.03em', marginBottom: '4px' }}>
+                $49<span style={{ fontSize: '16px', fontWeight: 500, color: '#8492a6' }}>/mo</span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#8492a6', marginBottom: '28px' }}>4 posts per month</div>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '11px', marginBottom: '32px', padding: 0 }}>
+                {[
+                  'AI topic suggestions for your service area',
+                  'Full research + AI draft in your voice',
+                  'Auto voice check + spell check',
+                  'SEO scoring, slug + meta generation',
+                  'AI hero image generation',
+                  'Copy/paste publish to any CMS',
+                  '1 service area',
+                ].map(item => (
+                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#3a4a5a', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" style={{ display: 'block', width: '100%', padding: '13px', background: '#1a2e44', color: '#fff', borderRadius: '9px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box' }}>
+                Get Started →
+              </Link>
             </div>
-            <div style={{ fontSize: '14px', color: '#8fa8c0', marginBottom: '28px' }}>Cancel anytime</div>
-            <ul style={{ listStyle: 'none', textAlign: 'left', display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '32px' }}>
-              {[
-                'AI gap analysis across your full service area',
-                'Live blog scraping to prevent duplicate content',
-                'Full draft written in your voice + auto voice check',
-                'SEO scoring, spell check, slug + meta generation',
-                'Hero image generation',
-                'One-click publish to GoHighLevel',
-                'Unlimited topics, unlimited posts',
-              ].map(item => (
-                <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '14px', color: '#c8d8e8', alignItems: 'flex-start' }}>
-                  <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
-                  {item}
-                </li>
-              ))}
-            </ul>
-            <Link
-              href="/login"
-              style={{
-                display: 'block', width: '100%', padding: '15px',
-                background: '#c8a96e', color: '#1a2e44',
-                borderRadius: '9px', fontSize: '16px', fontWeight: 700,
-                textDecoration: 'none', textAlign: 'center',
-                boxSizing: 'border-box',
-              }}
-            >
-              Access Your Dashboard →
-            </Link>
+
+            {/* Pro — highlighted */}
+            <div style={{ border: '2px solid #c8a96e', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#1a2e44', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)', background: '#c8a96e', color: '#1a2e44', fontSize: '11px', fontWeight: 800, letterSpacing: '0.07em', textTransform: 'uppercase', padding: '4px 16px', borderRadius: '20px', whiteSpace: 'nowrap' }}>
+                Most Popular
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#c8a96e', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Pro</div>
+              <div style={{ fontSize: '44px', fontWeight: 900, color: '#fff', letterSpacing: '-0.03em', marginBottom: '4px' }}>
+                $99<span style={{ fontSize: '16px', fontWeight: 500, color: '#8fa8c0' }}>/mo</span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#8fa8c0', marginBottom: '28px' }}>Unlimited posts</div>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '11px', marginBottom: '32px', padding: 0 }}>
+                {[
+                  'Everything in Solo',
+                  'Live site gap analysis — reads your blog to find coverage gaps',
+                  'Unlimited posts, no monthly cap',
+                  'API publishing to GHL, Lofty, or WordPress',
+                  '1 service area',
+                ].map(item => (
+                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#c8d8e8', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" style={{ display: 'block', width: '100%', padding: '13px', background: '#c8a96e', color: '#1a2e44', borderRadius: '9px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box' }}>
+                Get Started →
+              </Link>
+            </div>
+
+            {/* Team */}
+            <div style={{ border: '1.5px solid #e8edf2', borderRadius: '16px', padding: '36px 32px', textAlign: 'left', background: '#fafbfc' }}>
+              <div style={{ fontSize: '13px', fontWeight: 700, color: '#8492a6', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '12px' }}>Team</div>
+              <div style={{ fontSize: '44px', fontWeight: 900, color: '#1a2e44', letterSpacing: '-0.03em', marginBottom: '4px' }}>
+                $249<span style={{ fontSize: '16px', fontWeight: 500, color: '#8492a6' }}>/mo</span>
+              </div>
+              <div style={{ fontSize: '13px', color: '#8492a6', marginBottom: '28px' }}>Up to 5 agents</div>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '11px', marginBottom: '32px', padding: 0 }}>
+                {[
+                  'Everything in Pro',
+                  'Up to 5 agent seats',
+                  'Multiple service areas',
+                  'White-label option (remove RankReady branding)',
+                  'Priority support',
+                ].map(item => (
+                  <li key={item} style={{ display: 'flex', gap: '10px', fontSize: '13px', color: '#3a4a5a', alignItems: 'flex-start' }}>
+                    <span style={{ color: '#c8a96e', flexShrink: 0, marginTop: '1px' }}>✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link href="/login" style={{ display: 'block', width: '100%', padding: '13px', background: '#1a2e44', color: '#fff', borderRadius: '9px', fontSize: '14px', fontWeight: 700, textDecoration: 'none', textAlign: 'center', boxSizing: 'border-box' }}>
+                Get Started →
+              </Link>
+            </div>
+
           </div>
-          <p style={{ fontSize: '13px', color: '#aab8c8' }}>
+
+          <p style={{ fontSize: '13px', color: '#aab8c8', marginTop: '36px' }}>
             Already a member?{' '}
             <Link href="/login" style={{ color: '#1a6b9e', textDecoration: 'none', fontWeight: 600 }}>
               Sign in here
