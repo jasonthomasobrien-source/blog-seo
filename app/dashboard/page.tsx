@@ -103,6 +103,16 @@ export default function Dashboard() {
   const [customTopicValue, setCustomTopicValue] = useState('')
   const [customKeywordValue, setCustomKeywordValue] = useState('')
 
+  // Service area
+  type ServiceArea = { tier1: string[]; tier2: string[]; tier3: string[] }
+  const [serviceArea, setServiceArea] = useState<ServiceArea>({ tier1: [], tier2: [], tier3: [] })
+  const [showServiceArea, setShowServiceArea] = useState(false)
+  const [serviceAreaSaving, setServiceAreaSaving] = useState(false)
+  const [serviceAreaSaved, setServiceAreaSaved] = useState(false)
+  const [newCityTier1, setNewCityTier1] = useState('')
+  const [newCityTier2, setNewCityTier2] = useState('')
+  const [newCityTier3, setNewCityTier3] = useState('')
+
   // Topic & keyword inputs
   const [topicValue, setTopicValue] = useState('')
   const [keywordValue, setKeywordValue] = useState('')
@@ -169,6 +179,7 @@ export default function Dashboard() {
       if (d.type === 'demo') setIsDemo(true)
     }).catch(() => {})
     loadTopic()
+    loadServiceArea()
     loadDraft()
     loadSeoFields()
     refreshStatus()
@@ -231,6 +242,59 @@ export default function Dashboard() {
     } catch {
       // ignore
     }
+  }
+
+  // ── Service Area ───────────────────────────────────────────────────────────
+  async function loadServiceArea() {
+    try {
+      const r = await fetch('/api/service-area')
+      const d = await r.json()
+      if (d.serviceArea) setServiceArea(d.serviceArea)
+    } catch {
+      // ignore — defaults remain
+    }
+  }
+
+  async function saveServiceArea() {
+    setServiceAreaSaving(true)
+    try {
+      const r = await fetch('/api/service-area', {
+        method: 'POST',
+        body: JSON.stringify({ serviceArea }),
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const d = await r.json()
+      if (d.error) {
+        appendLog(`✗ Service area save failed: ${d.error}`, 'err')
+      } else {
+        setServiceAreaSaved(true)
+        setTimeout(() => setServiceAreaSaved(false), 2000)
+        // Clear stale suggestions so next run uses updated city list
+        setSuggestedTopics([])
+        setTopicsLoaded(false)
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e)
+      appendLog(`✗ ${msg}`, 'err')
+    } finally {
+      setServiceAreaSaving(false)
+    }
+  }
+
+  function addCityToTier(tier: keyof ServiceArea, city: string) {
+    const trimmed = city.trim()
+    if (!trimmed) return
+    setServiceArea(prev => ({
+      ...prev,
+      [tier]: prev[tier].includes(trimmed) ? prev[tier] : [...prev[tier], trimmed],
+    }))
+  }
+
+  function removeCityFromTier(tier: keyof ServiceArea, city: string) {
+    setServiceArea(prev => ({
+      ...prev,
+      [tier]: prev[tier].filter(c => c !== city),
+    }))
   }
 
   // ── Draft ──────────────────────────────────────────────────────────────────
@@ -669,6 +733,14 @@ export default function Dashboard() {
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
               <button
                 className="btn btn-outline btn-sm"
+                style={{ borderColor: '#2a3e54', color: showServiceArea ? '#c8a96e' : '#8492a6' }}
+                onClick={() => setShowServiceArea(v => !v)}
+                title="Configure service area cities"
+              >
+                ⚙ Service Area
+              </button>
+              <button
+                className="btn btn-outline btn-sm"
                 style={{ borderColor: '#c8a96e', color: '#c8a96e' }}
                 onClick={() => setShowCustomTopic(v => !v)}
                 disabled={running}
@@ -727,6 +799,112 @@ export default function Dashboard() {
                 </button>
                 <button className="btn btn-outline btn-sm" style={{ borderColor: '#3a4a5a', color: '#8492a6' }} onClick={() => { setShowCustomTopic(false); setCustomTopicValue(''); setCustomKeywordValue('') }}>Cancel</button>
               </div>
+            </div>
+          )}
+          {showServiceArea && (
+            <div style={{ padding: '16px 18px', borderBottom: '1px solid #2a3e54', background: '#0f1e2d' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <p style={{ fontSize: '12px', color: '#c8a96e', fontWeight: 600, marginBottom: '3px' }}>
+                    Service Area Configuration
+                  </p>
+                  <p style={{ fontSize: '11px', color: '#8492a6' }}>
+                    Cities used for gap analysis when suggesting topics.
+                    {topicsDebug && (
+                      <> &nbsp;·&nbsp; <strong style={{ color: '#c8a96e' }}>{topicsDebug.uncovered_cities ?? 0} uncovered</strong> of {serviceArea.tier1.length + serviceArea.tier2.length + serviceArea.tier3.length} total cities</>
+                    )}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  {serviceAreaSaved && <span style={{ fontSize: '11px', color: '#4caf50', fontWeight: 600 }}>✓ Saved!</span>}
+                  <button
+                    className="btn btn-gold btn-sm"
+                    onClick={saveServiceArea}
+                    disabled={running || serviceAreaSaving}
+                  >
+                    {serviceAreaSaving
+                      ? <><span className="spinner" style={{ borderTopColor: '#1a2e44' }}></span> Saving…</>
+                      : '💾 Save Coverage Area'}
+                  </button>
+                </div>
+              </div>
+
+              {(['tier1', 'tier2', 'tier3'] as const).map((tier, ti) => {
+                const tierLabels = ['Tier 1 — Primary Markets', 'Tier 2 — Secondary Markets', 'Tier 3 — Extended Coverage']
+                const inputValues = [newCityTier1, newCityTier2, newCityTier3]
+                const inputSetters = [setNewCityTier1, setNewCityTier2, setNewCityTier3]
+                const chipBg = ['#2a1a1a', '#1a2a1a', '#1a1a2a']
+                const chipColor = ['#e07070', '#70c090', '#8090e0']
+                const chipBorder = ['#e0707044', '#70c09044', '#8090e044']
+
+                return (
+                  <div key={tier} style={{ marginBottom: ti < 2 ? '18px' : 0 }}>
+                    <div style={{ fontSize: '11px', color: '#8492a6', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600, marginBottom: '8px' }}>
+                      {tierLabels[ti]} <span style={{ color: '#4a5a6a', fontWeight: 400 }}>({serviceArea[tier].length})</span>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+                      {serviceArea[tier].map(city => (
+                        <span
+                          key={city}
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', gap: '4px',
+                            background: chipBg[ti], color: chipColor[ti],
+                            fontSize: '11px', fontWeight: 600, padding: '3px 8px 3px 9px',
+                            borderRadius: '20px', border: `1px solid ${chipBorder[ti]}`,
+                          }}
+                        >
+                          {city}
+                          <button
+                            onClick={() => removeCityFromTier(tier, city)}
+                            style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: chipColor[ti], fontSize: '13px', lineHeight: 1,
+                              padding: '0 1px', opacity: 0.7,
+                            }}
+                            title={`Remove ${city}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                      {serviceArea[tier].length === 0 && (
+                        <span style={{ fontSize: '11px', color: '#4a5a6a', fontStyle: 'italic' }}>No cities in this tier</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        type="text"
+                        placeholder={`Add city to ${tierLabels[ti].split(' — ')[0]}…`}
+                        value={inputValues[ti]}
+                        onChange={e => inputSetters[ti](e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && inputValues[ti].trim()) {
+                            addCityToTier(tier, inputValues[ti])
+                            inputSetters[ti]('')
+                          }
+                        }}
+                        style={{
+                          background: '#1a2e44', color: '#e8edf2',
+                          border: '1px solid #2a3e54', borderRadius: '6px',
+                          padding: '5px 10px', fontSize: '12px', outline: 'none', width: '200px',
+                        }}
+                      />
+                      <button
+                        className="btn btn-outline btn-sm"
+                        style={{ borderColor: '#2a3e54', color: '#c8a96e' }}
+                        onClick={() => {
+                          if (inputValues[ti].trim()) {
+                            addCityToTier(tier, inputValues[ti])
+                            inputSetters[ti]('')
+                          }
+                        }}
+                      >
+                        + Add
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
           <div className="topics-body">

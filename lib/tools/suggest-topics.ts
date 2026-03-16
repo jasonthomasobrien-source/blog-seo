@@ -1,9 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk'
 import * as cheerio from 'cheerio'
-import { getPublishedKeywords } from '../storage'
+import { getPublishedKeywords, getConfig } from '../storage'
 
-// Full city list across all tiers — used for gap analysis
-const ALL_CITIES = {
+// Default city list — used as fallback when no service area is saved in Redis
+const DEFAULT_CITIES = {
   tier1: ['Kalamazoo', 'Portage', 'Grand Rapids', 'Battle Creek', 'South Haven', 'Kalamazoo County'],
   tier2: ['Plainwell', 'Otsego', 'Allegan', 'Paw Paw', 'Mattawan', 'Vicksburg', 'Schoolcraft', 'Richland', 'Wayland', 'Kentwood', 'Wyoming MI', 'Grandville'],
   tier3: ['Parchment', 'Comstock', 'Oshtemo', 'Texas Township', 'Saugatuck', 'Douglas', 'Three Rivers', 'Sturgis', 'Galesburg', 'Augusta', 'Delton', 'Lawton', 'Hartford', 'Gobles'],
@@ -208,6 +208,18 @@ export async function suggestTopics(
   }
 
   try {
+    // Load service area from Redis, fall back to defaults
+    const serviceAreaRaw = await getConfig('service_area')
+    let ALL_CITIES = DEFAULT_CITIES
+    if (serviceAreaRaw) {
+      try {
+        const parsed = JSON.parse(serviceAreaRaw)
+        if (Array.isArray(parsed.tier1) && Array.isArray(parsed.tier2) && Array.isArray(parsed.tier3)) {
+          ALL_CITIES = parsed
+        }
+      } catch { /* malformed JSON — use default */ }
+    }
+
     // Load published keywords from Redis
     const publishedEntries = await getPublishedKeywords()
     const publishedKeywords = publishedEntries.map(e => e.keyword)
