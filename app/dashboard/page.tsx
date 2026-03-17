@@ -940,14 +940,7 @@ export default function Dashboard() {
           <div className="topics-header">
             <div>
               <h2>SEO Topic Ideas</h2>
-              <p>AI-generated topics ranked by search opportunity — click one to select it</p>
-              {topicsDebug && (
-                <p style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
-                  Excluded {topicsDebug.total_excluded ?? 0} existing posts
-                  ({topicsDebug.site_scraped ?? 0} scraped from site · {topicsDebug.redis_keywords ?? 0} tracked · {topicsDebug.ghl_posts_found ?? 0} from GHL) ·
-                  {topicsDebug.uncovered_cities ?? 0} cities uncovered
-                </p>
-              )}
+              <p>{topicsLoaded ? 'Click any card to start — research and draft run automatically' : 'AI-generated topics ranked by search opportunity — click one to select it'}</p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', flexShrink: 0, alignItems: 'center' }}>
               <button
@@ -1128,25 +1121,15 @@ export default function Dashboard() {
           )}
           {topicsLoaded && topicsDebug && (
             <div style={{
-              padding: '8px 18px',
+              padding: '10px 18px',
               borderBottom: '1px solid #1e2d45',
               background: '#0a1524',
-              fontSize: '11px',
-              color: '#64748b',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              flexWrap: 'wrap',
             }}>
-              <span style={{ color: '#f59e0b', fontWeight: 600 }}>📊</span>
-              <span>Scanned <strong style={{ color: '#94a3b8' }}>{topicsDebug.site_scraped ?? 0}</strong> posts from your blog</span>
-              {(topicsDebug.ghl_posts_found ?? 0) > 0 && (
-                <><span style={{ color: '#2a3d57' }}>·</span><span><strong style={{ color: '#94a3b8' }}>{topicsDebug.ghl_posts_found}</strong> from GHL</span></>
-              )}
-              <span style={{ color: '#2a3d57' }}>·</span>
-              <span><strong style={{ color: '#f59e0b' }}>{topicsDebug.uncovered_cities ?? 0} cities</strong> with zero coverage</span>
-              <span style={{ color: '#2a3d57' }}>·</span>
-              <span>{topicsDebug.total_excluded ?? 0} total posts excluded from suggestions</span>
+              <p style={{ margin: '0 0 3px', fontSize: '12px', fontWeight: 700, color: '#f59e0b' }}>✦ Blog review complete.</p>
+              <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>
+                We found <strong style={{ color: '#94a3b8' }}>{(topicsDebug.site_scraped ?? 0) + (topicsDebug.ghl_posts_found ?? 0)} posts</strong> on your blog{(topicsDebug.ghl_posts_found ?? 0) > 0 ? <>, including <strong style={{ color: '#94a3b8' }}>{topicsDebug.ghl_posts_found}</strong> from GHL</> : ''}.{' '}
+                <strong style={{ color: '#94a3b8' }}>{topicsDebug.uncovered_cities ?? 0} cities</strong> in your service area have no coverage yet — those are your biggest SEO opportunities.
+              </p>
             </div>
           )}
           {topicsLoading && topicsStatusMsg && (
