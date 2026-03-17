@@ -132,6 +132,7 @@ export default function Dashboard() {
   const [cfgWpSiteUrl, setCfgWpSiteUrl] = useState('')
   const [cfgWpUsername, setCfgWpUsername] = useState('')
   const [cfgWpAppPassword, setCfgWpAppPassword] = useState('')
+  const [cfgBlogRssUrl, setCfgBlogRssUrl] = useState('')
   const [showGhlKey, setShowGhlKey] = useState(false)
   const [showLoftyKey, setShowLoftyKey] = useState(false)
   const [showWpPassword, setShowWpPassword] = useState(false)
@@ -248,6 +249,7 @@ export default function Dashboard() {
       setCfgWpSiteUrl(wpUrl)
       setCfgWpUsername(wpUser)
       setCfgWpAppPassword(d.wp_app_password || '')
+      setCfgBlogRssUrl(d.blog_rss_url || '')
       // Collapse blog fields if an API is configured
       if (ghlKey || loftyKey || (wpUrl && wpUser)) setShowBlogFields(false)
     }).catch(() => {})
@@ -376,6 +378,7 @@ export default function Dashboard() {
       setCfgWpSiteUrl(d.wp_site_url || '')
       setCfgWpUsername(d.wp_username || '')
       setCfgWpAppPassword(d.wp_app_password || '')
+      setCfgBlogRssUrl(d.blog_rss_url || '')
     } catch {
       // ignore
     }
@@ -394,6 +397,7 @@ export default function Dashboard() {
           wp_site_url: cfgWpSiteUrl,
           wp_username: cfgWpUsername,
           wp_app_password: cfgWpAppPassword,
+          blog_rss_url: cfgBlogRssUrl,
         }),
         headers: { 'Content-Type': 'application/json' },
       })
@@ -1604,6 +1608,14 @@ export default function Dashboard() {
                 <SettingsField label="Site URL" type="text" value={cfgWpSiteUrl} onChange={setCfgWpSiteUrl} placeholder="https://yoursite.com" theme={theme} />
                 <SettingsField label="Username" type="text" value={cfgWpUsername} onChange={setCfgWpUsername} placeholder="WordPress username" theme={theme} />
                 <SettingsField label="Application Password" type={showWpPassword ? 'text' : 'password'} value={cfgWpAppPassword} onChange={setCfgWpAppPassword} placeholder="xxxx xxxx xxxx xxxx" onToggle={() => setShowWpPassword(v => !v)} showToggle last theme={theme} />
+              </div>
+
+              {/* ── Blog ── */}
+              <div style={{ marginBottom: '28px' }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#f59e0b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>📰</span> Blog
+                </div>
+                <SettingsField label="RSS Feed URL" type="text" value={cfgBlogRssUrl} onChange={setCfgBlogRssUrl} placeholder="Auto-detected — paste override URL if needed" last theme={theme} />
               </div>
 
               {/* ── Service Area ── */}

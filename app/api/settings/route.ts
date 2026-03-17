@@ -9,6 +9,7 @@ const SETTINGS_KEYS = [
   'wp_site_url',
   'wp_username',
   'wp_app_password',
+  'blog_rss_url',
 ] as const
 
 type SettingsKey = typeof SETTINGS_KEYS[number]

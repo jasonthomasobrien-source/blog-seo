@@ -24,65 +24,104 @@ const CONTENT_TYPES = [
 
 // ── Live blog scraper ─────────────────────────────────────────────────────────
 
+async function fetchRssTitles(rssUrl: string): Promise<string[]> {
+  try {
+    const resp = await fetch(rssUrl, { signal: AbortSignal.timeout(10000) })
+    if (!resp.ok) return []
+    const xml = await resp.text()
+    const $ = cheerio.load(xml, { xmlMode: true })
+    const titles: string[] = []
+    $('item title, entry title').each((_, el) => {
+      const text = $(el).text().replace(/<!\[CDATA\[|\]\]>/g, '').trim()
+      if (text.length >= 10 && text.length <= 200) titles.push(text)
+    })
+    return titles
+  } catch { return [] }
+}
+
 async function fetchBlogPostsFromSite(): Promise<string[]> {
   const baseUrl = (process.env.BLOG_SITE_URL || 'https://joissellingwestmichigan.com/west-mi-blog').replace(/\/$/, '')
-  const titles: string[] = []
 
-  // Selectors that commonly wrap post titles in GHL and other blog platforms
-  const TITLE_SELECTORS = [
-    'h1', 'h2', 'h3',
-    '[class*="post-title"]', '[class*="blog-title"]', '[class*="entry-title"]',
-    '[class*="card-title"]', '[class*="article-title"]',
-    'article h2', 'article h3', '.post h2', '.post h3',
-  ]
-
-  async function scrapePage(url: string): Promise<string[]> {
-    try {
-      const resp = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BlogSEO/1.0)' },
-        signal: AbortSignal.timeout(10000),
-      })
-      if (!resp.ok) return []
-      const html = await resp.text()
-      const $ = cheerio.load(html)
-
-      const found: string[] = []
-      const seen = new Set<string>()
-
-      for (const sel of TITLE_SELECTORS) {
-        $(sel).each((_, el) => {
-          const text = $(el).text().trim()
-          // Filter: must be a plausible blog title (10–120 chars, not nav/button text)
-          if (text.length >= 10 && text.length <= 120 && !seen.has(text.toLowerCase())) {
-            seen.add(text.toLowerCase())
-            found.push(text)
-          }
-        })
-      }
-
-      return found
-    } catch (e) {
-      console.log(`[suggest-topics] Blog scrape error for ${url}: ${e}`)
-      return []
+  // 1. Config override — manual RSS URL saved in settings
+  const configRssUrl = await getConfig('blog_rss_url')
+  if (configRssUrl) {
+    const titles = await fetchRssTitles(configRssUrl)
+    if (titles.length > 0) {
+      console.log(`[suggest-topics] RSS config: ${titles.length} titles`)
+      return titles
     }
   }
 
-  // Scrape first page, then check for pagination (up to 5 pages)
-  const firstPage = await scrapePage(baseUrl)
-  titles.push(...firstPage)
+  // 2. Fetch blog page HTML — auto-discover RSS feed URL, then fall back to HTML scraping
+  try {
+    const resp = await fetch(baseUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BlogSEO/1.0)' },
+      signal: AbortSignal.timeout(10000),
+    })
+    if (!resp.ok) return []
+    const html = await resp.text()
 
-  for (let page = 2; page <= 5; page++) {
-    const pageUrl = `${baseUrl}?page=${page}`
-    const pageTitles = await scrapePage(pageUrl)
-    if (pageTitles.length === 0) break // no more pages
-    // Only continue if we got new titles
-    const newOnes = pageTitles.filter(t => !titles.includes(t))
-    if (newOnes.length === 0) break
-    titles.push(...newOnes)
+    // Auto-discover: look for rss-link.com URL in JS source, or standard <link rel="alternate">
+    const rssMatch = html.match(/https:\/\/rss-link\.com\/feed\/[A-Za-z0-9]+[^'"\s>)]+/)
+    const $head = cheerio.load(html)
+    const linkRss = $head('link[rel="alternate"][type="application/rss+xml"]').attr('href')
+    const discoveredUrl = rssMatch?.[0] || linkRss
+    if (discoveredUrl) {
+      const titles = await fetchRssTitles(discoveredUrl)
+      if (titles.length > 0) {
+        console.log(`[suggest-topics] RSS auto-discovered: ${titles.length} titles`)
+        return titles
+      }
+    }
+
+    // 3. Fall back to HTML title scraping (for non-JS-rendered blogs)
+    const TITLE_SELECTORS = [
+      'h1', 'h2', 'h3',
+      '[class*="post-title"]', '[class*="blog-title"]', '[class*="entry-title"]',
+      '[class*="card-title"]', '[class*="article-title"]',
+      'article h2', 'article h3', '.post h2', '.post h3',
+    ]
+
+    async function scrapePage(url: string): Promise<string[]> {
+      try {
+        const r = await fetch(url, {
+          headers: { 'User-Agent': 'Mozilla/5.0 (compatible; BlogSEO/1.0)' },
+          signal: AbortSignal.timeout(10000),
+        })
+        if (!r.ok) return []
+        const pageHtml = await r.text()
+        const $ = cheerio.load(pageHtml)
+        const found: string[] = []
+        const seen = new Set<string>()
+        for (const sel of TITLE_SELECTORS) {
+          $(sel).each((_, el) => {
+            const text = $(el).text().trim()
+            if (text.length >= 10 && text.length <= 120 && !seen.has(text.toLowerCase())) {
+              seen.add(text.toLowerCase())
+              found.push(text)
+            }
+          })
+        }
+        return found
+      } catch { return [] }
+    }
+
+    const titles: string[] = []
+    const firstPage = await scrapePage(baseUrl)
+    titles.push(...firstPage)
+    for (let page = 2; page <= 5; page++) {
+      const pageTitles = await scrapePage(`${baseUrl}?page=${page}`)
+      if (pageTitles.length === 0) break
+      const newOnes = pageTitles.filter(t => !titles.includes(t))
+      if (newOnes.length === 0) break
+      titles.push(...newOnes)
+    }
+    console.log(`[suggest-topics] HTML scrape: ${titles.length} titles from ${baseUrl}`)
+    return titles
+  } catch (e) {
+    console.log(`[suggest-topics] Blog fetch error: ${e}`)
+    return []
   }
-
-  console.log(`[suggest-topics] Scraped ${titles.length} titles from ${baseUrl}`)
-  return titles
 }
 
 interface GhlFetchResult {
