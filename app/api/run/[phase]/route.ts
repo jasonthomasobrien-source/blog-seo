@@ -32,7 +32,7 @@ export async function POST(
         if (phase === 'research') {
           // Get topic from config for context
           const topic = await getConfig('topic').catch(() => '')
-          result = await runResearch('Kalamazoo', topic, send)
+          result = await runResearch(topic, topic, send)
 
         } else if (phase === 'write_draft') {
           result = await generateDraft(send)

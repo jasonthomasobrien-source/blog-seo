@@ -12,7 +12,6 @@ const ZILLOW_CSVS: Record<string, string> = {
 }
 
 const GKAR_URL = 'https://www.gkar.com/market-statistics/'
-const KALAMAZOO_MSA = 'Kalamazoo'
 
 const BROWSER_HEADERS = {
   'User-Agent':
@@ -50,6 +49,26 @@ interface SourceItem {
   note?: string
 }
 
+// ── City helpers ────────────────────────────────────────────────────────────
+
+function extractCityFromTopic(topic: string): string {
+  const m1 = topic.match(/\b(?:to|in)\s+([A-Z][a-zA-Z ]+?)\s+(?:Michigan|MI)\b/i)
+  if (m1) return m1[1].trim()
+  const m2 = topic.match(/^([A-Z][a-zA-Z ]+?)\s+(?:Michigan|MI)\b/i)
+  if (m2) return m2[1].trim()
+  return ''
+}
+
+function getMsa(city: string): string {
+  const lower = city.toLowerCase()
+  if (lower.includes('battle creek')) return 'Battle Creek'
+  if (lower.includes('grand rapids') || lower.includes('kentwood') || lower.includes('grandville') || lower.includes('wyoming')) return 'Grand Rapids'
+  if (lower.includes('muskegon')) return 'Muskegon'
+  if (lower.includes('holland')) return 'Holland'
+  if (lower.includes('lansing')) return 'Lansing'
+  return 'Kalamazoo'
+}
+
 // ── Layer 1: Tavily Search ──────────────────────────────────────────────────
 
 async function fetchTavilyNews(
@@ -66,16 +85,16 @@ async function fetchTavilyNews(
   const now = new Date()
   const monthYear = now.toLocaleString('en-US', { month: 'long', year: 'numeric' })
 
+  const city = (topic ? extractCityFromTopic(topic) : '') || area || 'Kalamazoo'
   const queries = [
-    `Kalamazoo real estate market ${monthYear}`,
-    `Portage Michigan home prices housing market ${monthYear}`,
-    `Plainwell Otsego Richland Michigan real estate ${monthYear}`,
+    `${city} Michigan real estate ${monthYear}`,
+    `${city} home prices housing market ${monthYear}`,
     `West Michigan housing inventory days on market ${monthYear}`,
-    `Kalamazoo County mortgage rates home buyers ${monthYear}`,
+    `Michigan mortgage rates home buyers ${monthYear}`,
   ]
 
   if (topic) {
-    queries.unshift(`${topic} Kalamazoo Portage West Michigan real estate ${monthYear}`)
+    queries.unshift(`${topic} Michigan real estate ${monthYear}`)
   }
 
   const newsItems: NewsItem[] = []
@@ -151,6 +170,7 @@ function parseSimpleCsv(text: string): Array<Record<string, string>> {
 }
 
 async function fetchZillowStats(
+  msa: string,
   onLog: (line: string) => void
 ): Promise<{ stats: StatItem[]; sources: SourceItem[] }> {
   const stats: StatItem[] = []
@@ -169,7 +189,7 @@ async function fetchZillowStats(
 
       for (const row of rows) {
         const region = row['RegionName'] || ''
-        if (!region.toLowerCase().includes(KALAMAZOO_MSA.toLowerCase())) continue
+        if (!region.toLowerCase().includes(msa.toLowerCase())) continue
 
         // Find most recent date column
         const dateCols = Object.keys(row).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k))
@@ -366,14 +386,16 @@ export async function runResearch(
   onLog: (line: string) => void
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    onLog(`▶ Research started for area: ${area}${topic ? `, topic: ${topic}` : ''}`)
+    const city = extractCityFromTopic(topic) || area
+    const msa = getMsa(city)
+    onLog(`▶ Research started for: ${city}${topic ? ` — topic: ${topic}` : ''}`)
 
     // Layer 1: Tavily
-    const { news, sources: newsSources } = await fetchTavilyNews(area, topic || null, onLog)
+    const { news, sources: newsSources } = await fetchTavilyNews(city, topic || null, onLog)
     onLog(`✓ Tavily: ${news.length} articles found`)
 
     // Layer 2: Zillow
-    const { stats: zillowStats, sources: zillowSources } = await fetchZillowStats(onLog)
+    const { stats: zillowStats, sources: zillowSources } = await fetchZillowStats(msa, onLog)
     onLog(`✓ Zillow: ${zillowStats.length} stats found`)
 
     // Layer 3: GKAR
@@ -390,7 +412,7 @@ export async function runResearch(
     }
 
     // Build sources.md
-    let sourcesMd = buildSourcesMd(area, topic, news, allStats, allSources)
+    let sourcesMd = buildSourcesMd(city, topic, news, allStats, allSources)
     if (claudeResearch) {
       sourcesMd += '\n\n## Community Research Brief\n' + claudeResearch
     }
@@ -398,7 +420,7 @@ export async function runResearch(
     // Build research.json
     const researchJson = JSON.stringify(
       {
-        area,
+        area: city,
         topic: topic || null,
         timestamp: new Date().toISOString(),
         stats: allStats,
