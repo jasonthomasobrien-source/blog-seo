@@ -87,11 +87,6 @@ export default function Dashboard() {
   const [consoleStatus, setConsoleStatus] = useState<string>('Idle')
   const [activeTask, setActiveTask] = useState<boolean>(false)
 
-  // Status bar
-  const [pillSources, setPillSources] = useState<{ ok: boolean; mtime: string }>({ ok: false, mtime: '' })
-  const [pillDraft, setPillDraft] = useState<{ ok: boolean; mtime: string }>({ ok: false, mtime: '' })
-  const [pillImage, setPillImage] = useState<{ ok: boolean; mtime: string }>({ ok: false, mtime: '' })
-
   // Topic suggestions
   const [suggestedTopics, setSuggestedTopics] = useState<Topic[]>([])
   const [topicsDebug, setTopicsDebug] = useState<TopicDebug | null>(null)
@@ -154,6 +149,9 @@ export default function Dashboard() {
   const [imageUrl, setImageUrl] = useState<string>('')
   const [imageLocalExists, setImageLocalExists] = useState(false)
   const [imageTs, setImageTs] = useState(0)
+  const [imageOptions, setImageOptions] = useState<{ url: string; thumb: string; credit: string; alt: string }[]>([])
+  const [imageOptionsLoading, setImageOptionsLoading] = useState(false)
+  const [selectedImageUrl, setSelectedImageUrl] = useState('')
 
   // SEO check
   const [seoResult, setSeoResult] = useState<SeoResult | null>(null)
@@ -230,10 +228,7 @@ export default function Dashboard() {
     fetch('/api/auth/session').then(r => r.json()).then(d => {
       if (d.type === 'demo') setIsDemo(true)
     }).catch(() => {})
-    loadTopic()
     loadServiceArea()
-    loadDraft()
-    loadSeoFields()
     refreshStatus()
     checkApiKey()
     // Load settings on init so we know which APIs are configured
@@ -275,13 +270,7 @@ export default function Dashboard() {
   // ── Status ─────────────────────────────────────────────────────────────────
   async function refreshStatus() {
     try {
-      const r = await fetch('/api/status')
-      const s = await r.json()
-      setPillSources({ ok: !!s.sources, mtime: s.sources_mtime || '' })
-      setPillDraft({ ok: !!s.draft, mtime: s.draft_mtime || '' })
-      setPillImage({ ok: !!s.image, mtime: s.image_mtime || '' })
-      if (s.sources) loadSources()
-      loadImageInfo()
+      await fetch('/api/status')
     } catch {
       // silently fail on refresh
     }
@@ -921,22 +910,6 @@ export default function Dashboard() {
       )}
 
       {/* Status bar */}
-      <div className="status-bar">
-        <span className="status-label">Files:</span>
-        <span className={`pill ${pillSources.ok ? 'ok' : 'missing'}`}>
-          <span className="dot"></span>Research
-          {pillSources.mtime && <span style={{ color: '#888', fontWeight: 400 }}>{pillSources.mtime}</span>}
-        </span>
-        <span className={`pill ${pillDraft.ok ? 'ok' : 'missing'}`}>
-          <span className="dot"></span>Draft
-          {pillDraft.mtime && <span style={{ color: '#888', fontWeight: 400 }}>{pillDraft.mtime}</span>}
-        </span>
-        <span className={`pill ${pillImage.ok ? 'ok' : 'missing'}`}>
-          <span className="dot"></span>Image
-          {pillImage.mtime && <span style={{ color: '#888', fontWeight: 400 }}>{pillImage.mtime}</span>}
-        </span>
-      </div>
-
       <div className="main">
 
         {/* Topic Ideas */}
@@ -1349,35 +1322,83 @@ export default function Dashboard() {
 
               {/* Hero Image */}
               <div className="section-label">Hero Image</div>
-              <div className="image-panel" id="image-panel">
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt="Hero image"
-                    onError={e => {
-                      ;(e.target as HTMLImageElement).parentElement!.innerHTML =
-                        '<div class="image-placeholder"><span>⚠</span>Image URL found but preview failed.</div>'
-                    }}
-                  />
-                ) : imageLocalExists ? (
-                  <img src={`/api/hero-image?t=${imageTs}`} alt="Hero image" />
-                ) : (
-                  <div className="image-placeholder" style={{ flexDirection: 'column', gap: '8px', textAlign: 'center', padding: '20px' }}>
-                    <span style={{ fontSize: '28px' }}>📷</span>
-                    <span style={{ fontSize: '13px', color: '#94a3b8', lineHeight: 1.5 }}>
-                      Add your own photo of the city for best results.<br />
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>AI-generated images rarely reflect the actual area.</span>
-                    </span>
-                    <button
-                      className="btn btn-outline btn-sm"
-                      style={{ borderColor: '#1e2d45', color: '#64748b', fontSize: '11px', marginTop: '4px' }}
-                      onClick={() => runPhase('image', 'Generate Image')}
-                      disabled={running}
-                    >
-                      {running && runningBtn === 'Generate Image'
-                        ? <><span className="spinner"></span> Generating…</>
-                        : 'Generate placeholder image anyway →'}
-                    </button>
+
+              {/* Upload button — always visible */}
+              <label style={{ display: 'block', marginBottom: '10px', cursor: 'pointer' }}>
+                <input
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={async e => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    const form = new FormData()
+                    form.append('file', file)
+                    const r = await fetch('/api/hero-image', { method: 'POST', body: form })
+                    if (r.ok) { setImageLocalExists(true); setImageUrl(''); setImageTs(Date.now()); setImageOptions([]) }
+                  }}
+                />
+                <span className="btn btn-gold btn-sm btn-full" style={{ display: 'flex', justifyContent: 'center', gap: '6px' }}>
+                  📷 Upload Your Photo
+                </span>
+              </label>
+
+              {/* Current image preview */}
+              {(imageUrl || imageLocalExists) && (
+                <div className="image-panel" id="image-panel" style={{ marginBottom: '10px' }}>
+                  {imageUrl ? (
+                    <img src={imageUrl} alt="Hero image" onError={e => { (e.target as HTMLImageElement).parentElement!.innerHTML = '<div class="image-placeholder"><span>⚠</span>Preview failed.</div>' }} />
+                  ) : (
+                    <img src={`/api/hero-image?t=${imageTs}`} alt="Hero image" />
+                  )}
+                </div>
+              )}
+
+              {/* Find 3 Photos option */}
+              <div style={{ marginTop: '4px' }}>
+                <div style={{ fontSize: '11px', color: '#475569', textAlign: 'center', marginBottom: '8px' }}>— or find a regional photo —</div>
+                <button
+                  className="btn btn-outline btn-sm btn-full"
+                  style={{ borderColor: '#1e2d45', color: '#64748b' }}
+                  disabled={imageOptionsLoading}
+                  onClick={async () => {
+                    setImageOptionsLoading(true)
+                    setImageOptions([])
+                    try {
+                      const r = await fetch('/api/image-options')
+                      const d = await r.json()
+                      setImageOptions(d.options || [])
+                    } catch { /* ignore */ } finally {
+                      setImageOptionsLoading(false)
+                    }
+                  }}
+                >
+                  {imageOptionsLoading ? <><span className="spinner"></span> Searching…</> : 'Find 3 Photos →'}
+                </button>
+
+                {imageOptions.length > 0 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                      {imageOptions.map((opt, i) => (
+                        <div
+                          key={i}
+                          style={{ cursor: 'pointer', border: `2px solid ${selectedImageUrl === opt.url ? '#f59e0b' : '#1e2d45'}`, borderRadius: '6px', overflow: 'hidden', position: 'relative' }}
+                          onClick={async () => {
+                            setSelectedImageUrl(opt.url)
+                            const r = await fetch('/api/select-image', { method: 'POST', body: JSON.stringify({ url: opt.url }), headers: { 'Content-Type': 'application/json' } })
+                            if (r.ok) { setImageLocalExists(true); setImageUrl(''); setImageTs(Date.now()) }
+                          }}
+                        >
+                          <img src={opt.thumb} alt={opt.alt} style={{ width: '100%', height: '70px', objectFit: 'cover', display: 'block' }} />
+                          {selectedImageUrl === opt.url && (
+                            <div style={{ position: 'absolute', top: '4px', right: '4px', background: '#f59e0b', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 700 }}>✓</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ fontSize: '10px', color: '#475569', margin: '6px 0 0', textAlign: 'center' }}>
+                      Photo by {imageOptions.map(o => o.credit).join(' · ')} · Unsplash
+                    </p>
                   </div>
                 )}
               </div>
@@ -1418,8 +1439,9 @@ export default function Dashboard() {
                         onClick={markPublished}
                         disabled={running}
                       >
-                        ✓ Mark Keyword as Published
+                        ✓ Mark Topic as Done
                       </button>
+                      <p style={{ fontSize: '11px', color: '#475569', textAlign: 'center', margin: '2px 0 0' }}>Prevents this topic from being suggested again</p>
                     </>
                   ) : (
                     <>
@@ -1436,8 +1458,9 @@ export default function Dashboard() {
                         onClick={markPublished}
                         disabled={running}
                       >
-                        ✓ Mark Keyword as Published
+                        ✓ Mark Topic as Done
                       </button>
+                      <p style={{ fontSize: '11px', color: '#475569', textAlign: 'center', margin: '2px 0 0' }}>Prevents this topic from being suggested again</p>
                     </>
                   )
                 })()
