@@ -9,7 +9,7 @@ export async function readFile(path: string): Promise<string> {
   const { blobs } = await list({ prefix: path })
   const blob = blobs.find(b => b.pathname === path)
   if (!blob) return ''
-  const resp = await fetch(blob.url, { cache: 'no-store' })
+  const resp = await fetch(`${blob.url}?t=${Date.now()}`, { cache: 'no-store' })
   if (!resp.ok) return ''
   return await resp.text()
 }
@@ -18,7 +18,7 @@ export async function readFileBytes(path: string): Promise<Buffer | null> {
   const { blobs } = await list({ prefix: path })
   const blob = blobs.find(b => b.pathname === path)
   if (!blob) return null
-  const resp = await fetch(blob.url, { cache: 'no-store' })
+  const resp = await fetch(`${blob.url}?t=${Date.now()}`, { cache: 'no-store' })
   if (!resp.ok) return null
   return Buffer.from(await resp.arrayBuffer())
 }
