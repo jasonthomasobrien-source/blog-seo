@@ -101,11 +101,19 @@ export async function generateDraft(
     const dateStr = now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     const kwLine = keyword ? `\nPRIMARY SEO KEYWORD: ${keyword}` : ''
 
+    // Extract target city from topic for explicit city lock
+    const cityMatch = topic.match(/\b(?:to|in)\s+([A-Z][a-zA-Z ]+?)\s+(?:Michigan|MI)\b/i)
+      || topic.match(/^([A-Z][a-zA-Z ]+?)\s+(?:Michigan|MI)\b/i)
+    const targetCity = cityMatch?.[1]?.trim() || ''
+    const cityLock = targetCity
+      ? `\nTARGET CITY: ${targetCity}, Michigan. This post is ABOUT ${targetCity} ONLY. Do NOT write about Kalamazoo, Grand Rapids, or any other city as the main subject — they may appear only as nearby reference points (e.g. "30 minutes from Kalamazoo").`
+      : ''
+
     const userPrompt = `Today is ${dateStr}.
 
-TOPIC / TITLE IDEA: ${topic}${kwLine}
+TOPIC / TITLE IDEA: ${topic}${kwLine}${cityLock}
 
-RESEARCH DATA:
+RESEARCH DATA (use what is relevant to ${targetCity || 'the target city'} or West Michigan broadly — treat any Kalamazoo/GKAR stats as regional context only, not the subject of this post):
 ${sourcesMd.length > 0 ? sourcesMd.substring(0, 8000) : '(No research data found — write the post using your general knowledge of the West Michigan market. Do not fabricate specific stats.)'}
 
 Write the complete blog post now. Return ONLY the markdown content starting with the --- front matter block. No explanation before or after.`
