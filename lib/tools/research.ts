@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio'
 import Anthropic from '@anthropic-ai/sdk'
-import { writeFile, readFile } from '../storage'
+import { writeFile, readFile, setConfig } from '../storage'
 
 const ZILLOW_CSVS: Record<string, string> = {
   median_sale_price:
@@ -415,6 +415,7 @@ export async function runResearch(
 
     onLog('Saving sources.md to storage…')
     await writeFile('sources.md', sourcesMd)
+    await setConfig('pipeline_sources', sourcesMd)
 
     onLog(`✓ Research complete. ${news.length} articles, ${allStats.length} stats.`)
     return { success: true }

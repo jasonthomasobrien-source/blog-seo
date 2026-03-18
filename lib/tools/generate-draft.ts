@@ -84,7 +84,9 @@ export async function generateDraft(
     // Read inputs
     const topic = await getConfig('topic')
     const keyword = await getConfig('keyword')
-    const sourcesMd = await readFile('sources.md')
+    // Read sources from Redis first (no CDN layer), fall back to Blob
+    let sourcesMd = await getConfig('pipeline_sources')
+    if (!sourcesMd) sourcesMd = await readFile('sources.md')
 
     if (!topic) {
       return { success: false, error: 'No topic set. Save a topic first.' }
